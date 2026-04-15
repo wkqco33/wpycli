@@ -59,16 +59,10 @@ class LoggingSettings:
     default_level: str = "INFO"
     level_key: str = "logging.level"
     log_file_key: str = "logging.file"
-    error_file_key: str = "logging.error_file"
-    rotation_key: str = "logging.rotation"
-    timezone_key: str = "logging.timezone"
     max_bytes_key: str = "logging.max_bytes"
     backup_count_key: str = "logging.backup_count"
     level_flag: str | None = None
     log_file_flag: str | None = None
-    error_file_flag: str | None = None
-    rotation_flag: str | None = None
-    timezone_flag: str | None = None
 
     def build(self, *, command_name: str, config: Any, flag_values: Mapping[str, Any]) -> logging.Logger:
         try:
@@ -83,9 +77,6 @@ class LoggingSettings:
 
         level = _flag_override(flag_values, self.level_flag) or from_config(self.level_key, self.default_level)
         log_file = _flag_override(flag_values, self.log_file_flag) or from_config(self.log_file_key)
-        error_file = _flag_override(flag_values, self.error_file_flag) or from_config(self.error_file_key)
-        rotation = _flag_override(flag_values, self.rotation_flag) or from_config(self.rotation_key, "size")
-        timezone = _flag_override(flag_values, self.timezone_flag) or from_config(self.timezone_key)
         max_bytes = from_config(self.max_bytes_key, 10 * 1024 * 1024)
         backup_count = from_config(self.backup_count_key, 5)
 
@@ -94,9 +85,6 @@ class LoggingSettings:
             log_file=log_file,
             max_bytes=int(max_bytes),
             backup_count=int(backup_count),
-            timezone=timezone,
-            rotation=str(rotation),
-            error_file=error_file,
         )
         logger_name = self.logger_name or command_name.replace(" ", ".")
         return wlogger.get_logger(logger_name)

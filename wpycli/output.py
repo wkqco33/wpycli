@@ -72,7 +72,8 @@ class Terminal:
         accent: str = "cyan",
     ) -> str:
         lines = self._wrap_lines(body)
-        visible_width = max((len(_strip_ansi(line)) for line in lines), default=0)
+        stripped_widths = [len(_strip_ansi(line)) for line in lines]
+        visible_width = max(stripped_widths, default=0)
         title_text = f" {title} "
         visible_width = max(visible_width, len(title_text))
         horizontal = "-" * (visible_width + 2)
@@ -85,9 +86,8 @@ class Terminal:
             bottom = self.style(bottom, accent, "bold")
 
         rendered = [top]
-        for line in lines:
-            pad = visible_width - len(_strip_ansi(line))
-            rendered.append(f"| {line}{' ' * pad} |")
+        for line, width in zip(lines, stripped_widths):
+            rendered.append(f"| {line}{' ' * (visible_width - width)} |")
         rendered.append(bottom)
         return "\n".join(rendered)
 

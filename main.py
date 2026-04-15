@@ -46,7 +46,6 @@ def build_cli() -> Command:
     root.add_persistent_string_flag("dotenv", help="Path to a .env file")
     root.add_persistent_string_flag("log-level", help="Override the logging level")
     root.add_persistent_string_flag("log-file", help="Write JSON logs to a file")
-    root.add_persistent_string_flag("error-log-file", help="Write ERROR logs to a dedicated file")
 
     root.configure_runtime(
         config=ConfigSettings(
@@ -67,7 +66,6 @@ def build_cli() -> Command:
             logger_name="wpycli",
             level_flag="log-level",
             log_file_flag="log-file",
-            error_file_flag="error-log-file",
         ),
     )
 

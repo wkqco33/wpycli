@@ -304,7 +304,8 @@ class Command:
             self.args_validator(args)
 
     def _run(self, context: CommandContext) -> int:
-        for command in context.command.lineage():
+        lineage = context.command.lineage()
+        for command in lineage:
             if command.persistent_pre_run is not None:
                 command.persistent_pre_run(context)
         if context.command.pre_run is not None:
@@ -314,7 +315,7 @@ class Command:
 
         if context.command.post_run is not None:
             context.command.post_run(context)
-        for command in reversed(context.command.lineage()):
+        for command in reversed(lineage):
             if command.persistent_post_run is not None:
                 command.persistent_post_run(context)
         return 0 if result is None else int(result)
@@ -330,6 +331,7 @@ class Command:
         args: list[str] = []
         parsed_flags: dict[str, Any] = {}
         index = 0
+        flag_maps = self._flag_maps(current.lineage())
 
         while index < len(argv):
             token = argv[index]
@@ -348,7 +350,7 @@ class Command:
                 return self._build_invocation(self, parsed_flags, show_version=True)
 
             if token.startswith("-") and token != "-":
-                next_index, outcome = self._consume_flag(argv, index, current, parsed_flags)
+                next_index, outcome = self._consume_flag(argv, index, current, parsed_flags, flag_maps)
                 if outcome == "help":
                     return self._build_invocation(current, parsed_flags, show_help=True)
                 if outcome == "version":
@@ -359,6 +361,7 @@ class Command:
             child = current.find_subcommand(token) if not args else None
             if child is not None:
                 current = child
+                flag_maps = self._flag_maps(current.lineage())
                 index += 1
                 continue
 
@@ -378,8 +381,9 @@ class Command:
         index: int,
         current: "Command",
         parsed_flags: dict[str, Any],
+        flag_maps: tuple[dict[str, "Flag"], dict[str, "Flag"]],
     ) -> tuple[int, str | None]:
-        long_flags, short_flags = self._flag_maps(current.lineage())
+        long_flags, short_flags = flag_maps
         token = argv[index]
 
         if token in {"-h", "--help"}:
@@ -484,18 +488,13 @@ class Command:
 
     def _flags_for_help(self, lineage: tuple["Command", ...]) -> tuple[Flag, ...]:
         flags: list[Flag] = []
-        for command in lineage[:-1]:
-            flags.extend(tuple(command.persistent_flags))
-        leaf = lineage[-1]
-        flags.extend(tuple(leaf.persistent_flags))
-        flags.extend(tuple(leaf.flags))
+        for command in lineage:
+            flags.extend(command.persistent_flags)
+        flags.extend(lineage[-1].flags)
         return tuple(flags)
 
     def _inherited_persistent_flags(self, lineage: tuple["Command", ...]) -> tuple[Flag, ...]:
-        inherited: list[Flag] = []
-        for command in lineage[:-1]:
-            inherited.extend(tuple(command.persistent_flags))
-        return tuple(inherited)
+        return tuple(f for cmd in lineage[:-1] for f in cmd.persistent_flags)
 
     def _format_flags(self, flags: tuple[Flag, ...]) -> list[tuple[str, str]]:
         lines: list[tuple[str, str]] = []
