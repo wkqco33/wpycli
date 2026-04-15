@@ -4,13 +4,13 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "wpycli"
-version = "0.1.0"
+version = "0.1.1"
 description = "Cobra-inspired CLI toolkit for Python"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
-    "wlogger @ https://pypi.wkqcosoft.cloud/packages/wlogger-0.2.7-py3-none-any.whl",
-    "wconfig @ https://pypi.wkqcosoft.cloud/packages/wconfig-0.1.0-py3-none-any.whl",
+    "wconfig>=0.1.0",
+    "wlogger>=0.2.7",
 ]
 
 [project.scripts]
@@ -21,3 +21,7 @@ py-modules = ["main"]
 
 [tool.setuptools.packages.find]
 include = ["wpycli*"]
+
+[[tool.uv.index]]
+name = "wkqcosoft"
+url = "https://pypi.wkqcosoft.cloud"
