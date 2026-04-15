@@ -62,16 +62,16 @@ wheels = [
 
 [[package]]
 name = "wlogger"
-version = "0.2.7"
+version = "0.1.1"
 source = { registry = "https://pypi.wkqcosoft.cloud/" }
-sdist = { url = "http://pypi.wkqcosoft.cloud/packages/wlogger-0.2.7.tar.gz", hash = "sha256:b6c18f26a34e1f6d56e4bf6e2c23b9d9ebc2075c8684b8a64dfe457a6d175367" }
+sdist = { url = "http://pypi.wkqcosoft.cloud/packages/wlogger-0.1.1.tar.gz", hash = "sha256:97e2e0863e1ef04903d580fddb94cf6c4ceb8cefdcbd4c415575e20d64cdf962" }
 wheels = [
-    { url = "http://pypi.wkqcosoft.cloud/packages/wlogger-0.2.7-py3-none-any.whl", hash = "sha256:831fc4010ee8b1d09e024438ba8262bdda8ede9c0fcc0bff5cefe630bc8b9b16" },
+    { url = "http://pypi.wkqcosoft.cloud/packages/wlogger-0.1.1-py3-none-any.whl", hash = "sha256:07f609a9a8e1364fc52b752aa02612a6d529bfc11a078425d8869d0597abd96c" },
 ]
 
 [[package]]
 name = "wpycli"
-version = "0.1.0"
+version = "0.1.1"
 source = { editable = "." }
 dependencies = [
     { name = "wconfig" },
@@ -81,5 +81,5 @@ dependencies = [
 [package.metadata]
 requires-dist = [
     { name = "wconfig", specifier = ">=0.1.0" },
-    { name = "wlogger", specifier = ">=0.2.7" },
+    { name = "wlogger", specifier = ">=0.1.1" },
 ]
