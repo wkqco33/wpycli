@@ -82,7 +82,9 @@ class FlagSet:
         default: Any = None,
         shorthand: str | None = None,
     ) -> Flag:
-        return self.add(Flag(name=name, kind=kind, help=help, default=default, shorthand=shorthand))
+        return self.add(
+            Flag(name=name, kind=kind, help=help, default=default, shorthand=shorthand)
+        )
 
     def get(self, name: str) -> Flag | None:
         return self._flags.get(name)

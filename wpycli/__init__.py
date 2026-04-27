@@ -1,4 +1,6 @@
-from .command import CLIError, Command, CommandContext, UnknownCommandError, UnknownFlagError, UsageError
+from .command import Command
+from .context import CommandContext
+from .errors import CLIError, UnknownCommandError, UnknownFlagError, UsageError
 from .output import Terminal
 from .runtime import ConfigSettings, LoggingSettings
 

@@ -79,7 +79,7 @@ class Terminal:
         horizontal = "-" * (visible_width + 2)
         top = f"+{horizontal}+"
         if len(title_text) <= len(horizontal):
-            top = f"+{title_text}{horizontal[len(title_text):]}+"
+            top = f"+{title_text}{horizontal[len(title_text) :]}+"
         bottom = f"+{horizontal}+"
         if accent:
             top = self.style(top, accent, "bold")

@@ -11,17 +11,31 @@ def _log_command(context: CommandContext) -> None:
 
 
 def _run_serve(context: CommandContext) -> int:
-    host = context.config.get("server.host", "127.0.0.1") if context.config is not None else "127.0.0.1"
-    port = context.config.get("server.port", 8080) if context.config is not None else 8080
+    host = (
+        context.config.get("server.host", "127.0.0.1")
+        if context.config is not None
+        else "127.0.0.1"
+    )
+    port = (
+        context.config.get("server.port", 8080) if context.config is not None else 8080
+    )
     if context.logger is not None:
         context.logger.info("resolved server target %s:%s", host, port)
+    if context.terminal is None:
+        print(f"serving on {host}:{port}")
+        return 0
     print(context.terminal.message("success", "Serve", f"serving on {host}:{port}"))
     return 0
 
 
 def _run_config(context: CommandContext) -> int:
     payload = context.config.as_dict() if context.config is not None else {}
-    rendered = context.terminal.pretty_json(json.dumps(payload, indent=2, sort_keys=True))
+    if context.terminal is None:
+        print(json.dumps(payload, indent=2, sort_keys=True))
+        return 0
+    rendered = context.terminal.pretty_json(
+        json.dumps(payload, indent=2, sort_keys=True)
+    )
     print(context.terminal.panel("Merged configuration", rendered, accent="magenta"))
     return 0
 
@@ -30,6 +44,9 @@ def _run_echo(context: CommandContext) -> int:
     message = " ".join(context.args)
     if context.flags.get("upper"):
         message = message.upper()
+    if context.terminal is None:
+        print(message)
+        return 0
     print(context.terminal.message("info", "Echo", message))
     return 0
 
@@ -42,7 +59,9 @@ def build_cli() -> Command:
         version="0.1.0",
         persistent_pre_run=_log_command,
     )
-    root.add_persistent_string_flag("config", shorthand="c", help="Path to a YAML configuration file")
+    root.add_persistent_string_flag(
+        "config", shorthand="c", help="Path to a YAML configuration file"
+    )
     root.add_persistent_string_flag("dotenv", help="Path to a .env file")
     root.add_persistent_string_flag("log-level", help="Override the logging level")
     root.add_persistent_string_flag("log-file", help="Write JSON logs to a file")
@@ -69,8 +88,12 @@ def build_cli() -> Command:
         ),
     )
 
-    serve = Command(use="serve", short="Print the resolved server target", run=_run_serve)
-    show_config = Command(use="config", short="Print the merged configuration", run=_run_config)
+    serve = Command(
+        use="serve", short="Print the resolved server target", run=_run_serve
+    )
+    show_config = Command(
+        use="config", short="Print the merged configuration", run=_run_config
+    )
     echo = Command(use="echo", short="Echo positional arguments", run=_run_echo)
     echo.add_bool_flag("upper", shorthand="u", help="Uppercase the echoed output")
 
