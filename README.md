@@ -1,34 +1,66 @@
 # wpycli
 
-`wpycli`는 Python 3.12+ 환경을 위한 **Cobra 스타일 CLI 툴킷**입니다.
+`wpycli`는 Python 3.12+ 환경을 위한 **Cobra 스타일 CLI 툴킷**입니다. Go의 `cobra`에서 영감을 받아, 명확한 구조와 강력한 설정을 지향하면서도 Python다운 간결함을 유지합니다.
 
-주요 기능:
+## 주요 기능
 
-- 계층형 명령 트리와 alias 지원
-- local 플래그와 persistent 플래그 지원
-- `--help`, `help`, `--version` 자동 처리
-- 훅 기반 실행 흐름
-- `wconfig` 기반 계층형 설정 부트스트랩
-- `wlogger` 기반 로깅 부트스트랩
-- `rich` 없이도 색상, 패널, 구조화된 help를 제공하는 경량 터미널 출력
+- **관리 도구**: `wpycli init`, `add` 명령어를 통한 프로젝트 구조 자동 생성 및 관리
+- **명령 트리**: 계층형 명령 트리와 alias 지원
+- **플래그 시스템**: local 플래그와 persistent 플래그 지원
+- **자동화된 도움말**: `--help`, `help`, `--version` 자동 처리
+- **유연한 훅**: 전처리와 후처리를 위한 훅 기반 실행 흐름
+- **런타임 부트스트랩**: `wconfig` 기반 계층형 설정 및 `wlogger` 기반 로깅 자동 구성
+- **경량 터미널**: `rich` 없이도 색상, 패널, 구조화된 help를 제공하는 내장 렌더러
 
-이 프로젝트는 `https://pypi.wkqcosoft.cloud` 에서 직접 호스팅하는 `wlogger`, `wconfig` 패키지를 사용합니다.
+## 설치 및 환경 구성
 
-## 설치
+`uv`를 사용하여 의존성을 설치하고 개발 환경을 구성하는 것을 권장합니다.
 
 ```bash
-pip install .
+# 프로젝트 다운로드 및 의존성 설치
+git clone <repository-url>
+cd wpycli
+uv sync
+
+# 또는 라이브러리로 설치
+uv pip install .
 ```
 
-`pyproject.toml`에 직접 wheel URL을 사용하고 있으므로, 설치 시 `wlogger`와 `wconfig`도 함께 자동으로 내려받습니다.
+## 프로젝트 관리 (CLI 도구)
 
-## 예제
+`wpycli` 관리 도구 또한 `uv run`을 통해 즉시 실행할 수 있습니다.
+
+### 1. 프로젝트 초기화
+
+새로운 CLI 프로젝트를 시작합니다.
 
 ```bash
-python main.py --help
-python main.py serve --config ./config.yaml
-python main.py --log-level DEBUG config
-python main.py echo hello world
+uv run wpycli init my-project
+```
+
+- `main.py`: 엔트리포인트 파일 생성
+- `my_project/commands/root.py`: 루트 커맨드 정의 파일 생성
+
+### 2. 커맨드 추가
+
+프로젝트에 새로운 서브 커맨드를 추가합니다.
+
+```bash
+cd my-project
+uv run wpycli add serve
+```
+
+- `my_project/commands/serve.py`: 커맨드 로직 파일 생성
+- `root.py`에 해당 커맨드가 자동으로 임포트 및 등록됩니다.
+
+## 예제 실행
+
+`uv run`을 사용하면 별도의 가상환경 활성화 없이도 안전하게 예제를 실행할 수 있습니다.
+
+```bash
+uv run python main.py --help
+uv run python main.py serve --config ./config.yaml
+uv run python main.py --log-level DEBUG config
 ```
 
 ## 프로그래밍 모델
@@ -36,48 +68,41 @@ python main.py echo hello world
 ```python
 from wpycli import Command, ConfigSettings, LoggingSettings
 
-root = Command(
-    use="demo",
-    short="Demo CLI",
-    version="0.1.0",
-)
+def build_cli() -> Command:
+    root = Command(
+        use="demo",
+        short="Demo CLI",
+        version="0.1.0",
+    )
 
-root.add_persistent_string_flag("config", help="설정 파일 경로")
-root.add_persistent_string_flag("log-level", help="로그 레벨 덮어쓰기")
+    root.add_persistent_string_flag("config", help="설정 파일 경로")
+    
+    root.configure_runtime(
+        config=ConfigSettings(
+            defaults={"server": {"port": 8080}},
+            env_prefix="DEMO",
+            file_flag="config",
+        ),
+        logging=LoggingSettings(logger_name="demo"),
+    )
 
-root.configure_runtime(
-    config=ConfigSettings(
-        defaults={"logging": {"level": "INFO"}},
-        env_prefix="DEMO",
-        file_flag="config",
-    ),
-    logging=LoggingSettings(
-        logger_name="demo",
-        level_flag="log-level",
-    ),
-)
+    def _run_echo(ctx):
+        print(f"Echo: {' '.join(ctx.args)}")
 
-def run(ctx):
-    ctx.logger.info("running %s", ctx.command.full_path)
-    print(ctx.config.as_dict())
+    echo = Command(use="echo", short="출력", run=_run_echo)
+    root.add_command(echo)
+    return root
 
-show = Command(use="show", short="설정 출력", run=run)
-root.add_command(show)
-
-raise SystemExit(root.execute())
+if __name__ == "__main__":
+    build_cli().execute()
 ```
 
-## Cobra 스타일 동작 방식
-
-- 루트 명령이 전체 명령 트리를 소유합니다.
-- 하위 명령은 `add_command()`로 명시적으로 등록합니다.
-- persistent 플래그는 부모 명령에서 자식 명령으로 전파됩니다.
-- 실행 순서는 `persistent_pre_run* -> pre_run -> run -> post_run -> persistent_post_run*` 입니다.
-- help 텍스트는 명령 메타데이터와 등록된 플래그를 기준으로 자동 생성됩니다.
-- 터미널 출력은 `rich` 대신 내부 경량 렌더러를 사용합니다.
-
-## 개발
+## 개발 및 테스트
 
 ```bash
-python -m unittest discover -s tests
+# 의존성 동기화
+uv sync
+
+# 테스트 실행
+uv run python -m unittest discover -s tests
 ```
