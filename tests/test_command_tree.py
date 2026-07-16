@@ -68,6 +68,32 @@ class CommandTreeTests(unittest.TestCase):
         self.assertIn("unknown flag '--bogus'", stderr.getvalue())
         self.assertIn("+ Error ", stderr.getvalue())
 
+    def test_unexpected_exception_returns_exit_code_1(self) -> None:
+        root = Command(use="app")
+        def buggy_run(ctx):
+            raise ZeroDivisionError("division by zero in handler")
+        root.run = buggy_run
+        
+        stdout = io.StringIO()
+        stderr = io.StringIO()
+        with redirect_stdout(stdout), redirect_stderr(stderr):
+            exit_code = root.execute([])
+            
+        self.assertEqual(exit_code, 1)
+        self.assertIn("System Error", stderr.getvalue())
+        self.assertIn("division by zero", stderr.getvalue())
+
+    def test_lineage_and_full_path_cache(self) -> None:
+        root = Command(use="app")
+        child = Command(use="child")
+        
+        self.assertEqual(child.full_path, "child")
+        self.assertEqual(len(child.lineage()), 1)
+        
+        root.add_command(child)
+        self.assertEqual(child.full_path, "app child")
+        self.assertEqual(len(child.lineage()), 2)
+
 
 if __name__ == "__main__":
     unittest.main()

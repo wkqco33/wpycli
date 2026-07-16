@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 import sys
 from typing import Any, Sequence
 
@@ -8,6 +9,8 @@ from .errors import CLIError, UsageError
 from .flags import Flag, FlagSet
 from .output import Terminal
 from .runtime import ConfigSettings, LoggingSettings, bootstrap_runtime
+
+_logger = logging.getLogger("wpycli")
 
 
 class Command:
@@ -43,6 +46,8 @@ class Command:
         self.persistent_flags = FlagSet()
         self._config_settings: ConfigSettings | None = None
         self._logging_settings: LoggingSettings | None = None
+        self._lineage_cache: tuple[Command, ...] | None = None
+        self._full_path_cache: str | None = None
 
         if not self.use:
             raise ValueError("use must not be empty")
@@ -53,15 +58,21 @@ class Command:
 
     @property
     def full_path(self) -> str:
-        return " ".join(command.name for command in self.lineage())
+        if self._full_path_cache is not None:
+            return self._full_path_cache
+        self._full_path_cache = " ".join(command.name for command in self.lineage())
+        return self._full_path_cache
 
     def lineage(self) -> tuple["Command", ...]:
+        if self._lineage_cache is not None:
+            return self._lineage_cache
         commands: list[Command] = []
         current: Command | None = self
         while current is not None:
             commands.append(current)
             current = current.parent
-        return tuple(reversed(commands))
+        self._lineage_cache = tuple(reversed(commands))
+        return self._lineage_cache
 
     def root(self) -> "Command":
         command = self
@@ -84,9 +95,16 @@ class Command:
                 duplicate = next(iter(taken & names))
                 raise ValueError(f"duplicate command name or alias: {duplicate}")
             command.parent = self
+            command._invalidate_lineage_cache()
             self.commands.append(command)
             taken |= names
         return self
+
+    def _invalidate_lineage_cache(self) -> None:
+        self._lineage_cache = None
+        self._full_path_cache = None
+        for command in self.commands:
+            command._invalidate_lineage_cache()
 
     def find_subcommand(self, token: str) -> "Command | None":
         for command in self.commands:
@@ -242,8 +260,19 @@ class Command:
         argv_list = list(sys.argv[1:] if argv is None else argv)
         stdout_terminal = Terminal(stream=sys.stdout)
         stderr_terminal = Terminal(stream=sys.stderr)
+        
+        _logger.debug("Starting CLI execution with argv: %s", argv_list)
         try:
             resolved = resolve_invocation(self, argv_list)
+            _logger.debug(
+                "Resolved command: %s (args=%s, flags=%s, show_help=%s, show_version=%s)",
+                resolved.command.full_path,
+                resolved.args,
+                resolved.flags,
+                resolved.show_help,
+                resolved.show_version,
+            )
+            
             if resolved.show_help:
                 print(help_text(resolved.command, stdout_terminal))
                 return 0
@@ -261,6 +290,8 @@ class Command:
 
             resolved.command._validate_args(resolved.args)
             runtime_owner = resolved.command._runtime_owner()
+            
+            _logger.debug("Bootstrapping runtime for owner: %s", runtime_owner.full_path if runtime_owner else "None")
             runtime = bootstrap_runtime(
                 command_name=resolved.command.full_path,
                 flag_values=resolved.flags,
@@ -280,8 +311,10 @@ class Command:
                 logger=runtime.logger,
                 terminal=stdout_terminal,
             )
+            _logger.debug("Executing command logic...")
             return resolved.command._run(context)
         except CLIError as exc:
+            _logger.warning("CLI usage error: %s", exc)
             if str(exc):
                 print(
                     stderr_terminal.message("error", "Error", str(exc)), file=sys.stderr
@@ -289,6 +322,13 @@ class Command:
             if exc.command is not None:
                 print(stderr_terminal.muted(usage_text(exc.command)), file=sys.stderr)
             return exc.exit_code
+        except Exception as exc:
+            _logger.exception("Unexpected system error occurred during execution")
+            print(
+                stderr_terminal.message("error", "System Error", f"An unexpected error occurred: {exc}"),
+                file=sys.stderr
+            )
+            return 1
 
     def usage_text(self) -> str:
         from .help import usage_text
@@ -308,16 +348,21 @@ class Command:
         lineage = context.command.lineage()
         for command in lineage:
             if command.persistent_pre_run is not None:
+                _logger.debug("Executing persistent_pre_run for command: %s", command.full_path)
                 command.persistent_pre_run(context)
         if context.command.pre_run is not None:
+            _logger.debug("Executing pre_run for command: %s", context.command.full_path)
             context.command.pre_run(context)
 
+        _logger.debug("Running handler for command: %s", context.command.full_path)
         result = context.command.run(context) if context.command.run is not None else 0
 
         if context.command.post_run is not None:
+            _logger.debug("Executing post_run for command: %s", context.command.full_path)
             context.command.post_run(context)
         for command in reversed(lineage):
             if command.persistent_post_run is not None:
+                _logger.debug("Executing persistent_post_run for command: %s", command.full_path)
                 command.persistent_post_run(context)
         return 0 if result is None else int(result)
 

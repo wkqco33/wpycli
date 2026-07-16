@@ -2,11 +2,10 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 import os
-import re
-import textwrap
 from typing import Sequence, TextIO
 
-_ANSI_RE = re.compile(r"\x1b\[[0-9;]*m")
+from .utils import strip_ansi, visual_width, visual_wrap
+
 _ANSI_CODES = {
     "bold": "1",
     "cyan": "36",
@@ -22,10 +21,6 @@ _KIND_STYLES = {
     "warning": ("yellow", "bold"),
     "error": ("red", "bold"),
 }
-
-
-def _strip_ansi(text: str) -> str:
-    return _ANSI_RE.sub("", text)
 
 
 @dataclass(slots=True)
@@ -72,14 +67,18 @@ class Terminal:
         accent: str = "cyan",
     ) -> str:
         lines = self._wrap_lines(body)
-        stripped_widths = [len(_strip_ansi(line)) for line in lines]
+        stripped_widths = [visual_width(line) for line in lines]
         visible_width = max(stripped_widths, default=0)
+        
+        title_width = visual_width(title)
         title_text = f" {title} "
-        visible_width = max(visible_width, len(title_text))
+        title_text_width = title_width + 2
+        
+        visible_width = max(visible_width, title_text_width)
         horizontal = "-" * (visible_width + 2)
         top = f"+{horizontal}+"
-        if len(title_text) <= len(horizontal):
-            top = f"+{title_text}{horizontal[len(title_text) :]}+"
+        if title_text_width <= len(horizontal):
+            top = f"+{title_text}{'-' * (visible_width + 2 - title_text_width)}+"
         bottom = f"+{horizontal}+"
         if accent:
             top = self.style(top, accent, "bold")
@@ -94,10 +93,11 @@ class Terminal:
     def definition_list(self, rows: Sequence[tuple[str, str]]) -> str:
         if not rows:
             return ""
-        label_width = max(len(label) for label, _ in rows)
+        label_widths = [visual_width(label) for label, _ in rows]
+        label_width = max(label_widths, default=0)
         lines: list[str] = []
-        for label, description in rows:
-            padded = f"{label:<{label_width}}"
+        for (label, description), width in zip(rows, label_widths):
+            padded = f"{label}{' ' * (label_width - width)}"
             lines.append(f"  {self.highlight(padded)}  {description}".rstrip())
         return "\n".join(lines)
 
@@ -132,12 +132,6 @@ class Terminal:
             if not raw_line:
                 lines.append("")
                 continue
-            wrapped = textwrap.wrap(
-                raw_line,
-                width=width,
-                replace_whitespace=False,
-                drop_whitespace=False,
-                break_long_words=False,
-            )
+            wrapped = visual_wrap(raw_line, width)
             lines.extend(wrapped or [""])
         return lines

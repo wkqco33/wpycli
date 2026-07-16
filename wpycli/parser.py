@@ -1,7 +1,11 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from functools import lru_cache
+import logging
 from typing import Any
+
+_logger = logging.getLogger("wpycli")
 
 from .command import Command
 from .errors import UnknownCommandError, UnknownFlagError, UsageError
@@ -19,6 +23,7 @@ class ResolvedInvocation:
 
 
 def resolve_invocation(command: Command, argv: list[str]) -> ResolvedInvocation:
+    _logger.debug("Resolving invocation: argv=%s", argv)
     current = command
     args: list[str] = []
     parsed_flags: dict[str, Any] = {}
@@ -200,6 +205,7 @@ def _default_flag_values(lineage: tuple[Command, ...]) -> dict[str, Any]:
     return defaults
 
 
+@lru_cache(maxsize=128)
 def _flag_maps(
     lineage: tuple[Command, ...]
 ) -> tuple[dict[str, Flag], dict[str, Flag]]:
@@ -212,6 +218,7 @@ def _flag_maps(
     return long_flags, short_flags
 
 
+@lru_cache(maxsize=128)
 def flags_for_help(lineage: tuple[Command, ...]) -> tuple[Flag, ...]:
     flags: list[Flag] = []
     for command in lineage:
@@ -220,5 +227,6 @@ def flags_for_help(lineage: tuple[Command, ...]) -> tuple[Flag, ...]:
     return tuple(flags)
 
 
+@lru_cache(maxsize=128)
 def inherited_persistent_flags(lineage: tuple[Command, ...]) -> tuple[Flag, ...]:
     return tuple(f for cmd in lineage[:-1] for f in cmd.persistent_flags)
