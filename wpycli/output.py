@@ -4,16 +4,33 @@ from dataclasses import dataclass
 import os
 from typing import Sequence, TextIO
 
-from .utils import strip_ansi, visual_width, visual_wrap
+from .utils import visual_width, visual_wrap
 
 _ANSI_CODES = {
+    # Text decoration
     "bold": "1",
-    "cyan": "36",
+    "dim": "2",
+    "italic": "3",
+    "underline": "4",
+    "strikethrough": "9",
+    # Standard colors
+    "black": "30",
+    "red": "31",
     "green": "32",
     "yellow": "33",
-    "red": "31",
+    "blue": "34",
     "magenta": "35",
-    "dim": "2",
+    "cyan": "36",
+    "white": "37",
+    # Bright colors
+    "bright_black": "90",
+    "bright_red": "91",
+    "bright_green": "92",
+    "bright_yellow": "93",
+    "bright_blue": "94",
+    "bright_magenta": "95",
+    "bright_cyan": "96",
+    "bright_white": "97",
 }
 _KIND_STYLES = {
     "info": ("cyan", "bold"),
@@ -89,6 +106,54 @@ class Terminal:
             rendered.append(f"| {line}{' ' * (visible_width - width)} |")
         rendered.append(bottom)
         return "\n".join(rendered)
+
+    def table(
+        self,
+        headers: Sequence[str],
+        rows: Sequence[Sequence[str]],
+        *,
+        accent: str = "cyan",
+    ) -> str:
+        columns = len(headers)
+        str_rows = [[str(cell) for cell in row] for row in rows]
+        widths = [visual_width(header) for header in headers]
+        for row in str_rows:
+            for i in range(columns):
+                cell_width = visual_width(row[i]) if i < len(row) else 0
+                widths[i] = max(widths[i], cell_width)
+
+        def _render_row(cells: Sequence[str]) -> str:
+            parts = []
+            for i in range(columns):
+                cell = cells[i] if i < len(cells) else ""
+                parts.append(f"{cell}{' ' * (widths[i] - visual_width(cell))}")
+            return "  ".join(parts).rstrip()
+
+        header_text = _render_row(headers)
+        lines = [
+            self.style(header_text, accent, "bold"),
+            self.style("-" * visual_width(header_text), accent),
+        ]
+        lines.extend(_render_row(row) for row in str_rows)
+        return "\n".join(lines)
+
+    def confirm(self, message: str, *, default: bool = False) -> bool:
+        suffix = "[Y/n]" if default else "[y/N]"
+        while True:
+            raw = input(f"{message} {suffix} ").strip().lower()
+            if not raw:
+                return default
+            if raw in {"y", "yes"}:
+                return True
+            if raw in {"n", "no"}:
+                return False
+
+    def prompt(self, message: str, *, secret: bool = False) -> str:
+        if secret:
+            import getpass
+
+            return getpass.getpass(message)
+        return input(message)
 
     def definition_list(self, rows: Sequence[tuple[str, str]]) -> str:
         if not rows:

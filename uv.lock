@@ -62,11 +62,11 @@ wheels = [
 
 [[package]]
 name = "wlogger"
-version = "0.1.1"
+version = "0.2.0"
 source = { registry = "https://pypi.wkqcosoft.cloud/" }
-sdist = { url = "http://pypi.wkqcosoft.cloud/packages/wlogger-0.1.1.tar.gz", hash = "sha256:97e2e0863e1ef04903d580fddb94cf6c4ceb8cefdcbd4c415575e20d64cdf962" }
+sdist = { url = "http://pypi.wkqcosoft.cloud/packages/wlogger-0.2.0.tar.gz", hash = "sha256:8a3b0734f78e63531533e6918ec5b2b3f9a13557589650a36de9cff101feda44" }
 wheels = [
-    { url = "http://pypi.wkqcosoft.cloud/packages/wlogger-0.1.1-py3-none-any.whl", hash = "sha256:07f609a9a8e1364fc52b752aa02612a6d529bfc11a078425d8869d0597abd96c" },
+    { url = "http://pypi.wkqcosoft.cloud/packages/wlogger-0.2.0-py3-none-any.whl", hash = "sha256:d20e396dd9169466f1af503f7db8baf4e8e5b7da0f37e4bf5231be11b0596d4d" },
 ]
 
 [[package]]

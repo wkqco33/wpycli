@@ -27,6 +27,14 @@ def build_cli() -> Command:
     return root
 """
 
+CONFIG_TEMPLATE = """server:
+  host: 127.0.0.1
+  port: 8080
+
+logging:
+  level: INFO
+"""
+
 COMMAND_TEMPLATE = """from __future__ import annotations
 
 from wpycli import Command, CommandContext

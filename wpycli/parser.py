@@ -1,15 +1,29 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+import difflib
 from functools import lru_cache
 import logging
-from typing import Any
+from typing import Any, Iterable
 
-_logger = logging.getLogger("wpycli")
-
-from .command import Command
+from .command import INTERNAL_LOGGER_NAME, Command
 from .errors import UnknownCommandError, UnknownFlagError, UsageError
 from .flags import Flag
+
+_logger = logging.getLogger(INTERNAL_LOGGER_NAME)
+
+
+def _suggest(token: str, candidates: Iterable[str]) -> str | None:
+    matches = difflib.get_close_matches(token, list(candidates), n=1, cutoff=0.6)
+    return matches[0] if matches else None
+
+
+def _command_names(command: Command) -> list[str]:
+    names: list[str] = []
+    for child in command.commands:
+        names.append(child.name)
+        names.extend(child.aliases)
+    return names
 
 
 @dataclass(slots=True)
@@ -72,7 +86,9 @@ def resolve_invocation(command: Command, argv: list[str]) -> ResolvedInvocation:
             continue
 
         if current.commands and current.run is None and not args:
-            raise UnknownCommandError(token, command=current)
+            raise UnknownCommandError(
+                token, command=current, suggestion=_suggest(token, _command_names(current))
+            )
 
         args.append(token)
         index += 1
@@ -102,7 +118,12 @@ def _consume_flag(
         name, has_value, value = token[2:].partition("=")
         flag = long_flags.get(name)
         if flag is None:
-            raise UnknownFlagError(token, command=current)
+            suggestion = _suggest(name, long_flags.keys())
+            raise UnknownFlagError(
+                token,
+                command=current,
+                suggestion=f"--{suggestion}" if suggestion else None,
+            )
         if flag.takes_value:
             raw_value = (
                 value
@@ -116,7 +137,7 @@ def _consume_flag(
         if has_value:
             parsed_flags[flag.name] = _convert_flag_value(flag, value, current)
         else:
-            parsed_flags[flag.name] = True
+            _mark_flag_present(flag, parsed_flags)
         return index + 1, None
 
     cluster = token[1:]
@@ -140,10 +161,17 @@ def _consume_flag(
                 flag, raw_value, current
             )
             return index + 2, None
-        parsed_flags[flag.name] = True
+        _mark_flag_present(flag, parsed_flags)
         offset += 1
 
     return index + 1, None
+
+
+def _mark_flag_present(flag: Flag, parsed_flags: dict[str, Any]) -> None:
+    if flag.kind == "count":
+        parsed_flags[flag.name] = parsed_flags.get(flag.name, 0) + 1
+    else:
+        parsed_flags[flag.name] = True
 
 
 def _next_flag_value(
@@ -172,7 +200,9 @@ def _resolve_help_target(start: Command, tokens: list[str]) -> Command:
             raise UsageError("help does not accept flags", command=target)
         child = target.find_subcommand(token)
         if child is None:
-            raise UnknownCommandError(token, command=target)
+            raise UnknownCommandError(
+                token, command=target, suggestion=_suggest(token, _command_names(target))
+            )
         target = child
     return target
 

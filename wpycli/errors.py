@@ -19,13 +19,27 @@ class UsageError(CLIError):
     pass
 
 
+def _with_suggestion(message: str, suggestion: str | None) -> str:
+    if not suggestion:
+        return message
+    return f"{message}\n\nDid you mean this?\n\t{suggestion}"
+
+
 class UnknownCommandError(UsageError):
-    def __init__(self, token: str, *, command: Command) -> None:
-        super().__init__(
-            f"unknown command {token!r} for {command.full_path}", command=command
-        )
+    def __init__(
+        self, token: str, *, command: Command, suggestion: str | None = None
+    ) -> None:
+        message = f"unknown command {token!r} for {command.full_path}"
+        super().__init__(_with_suggestion(message, suggestion), command=command)
 
 
 class UnknownFlagError(UsageError):
-    def __init__(self, token: str, *, command: Command) -> None:
-        super().__init__(f"unknown flag {token!r}", command=command)
+    def __init__(
+        self, token: str, *, command: Command, suggestion: str | None = None
+    ) -> None:
+        message = f"unknown flag {token!r}"
+        super().__init__(_with_suggestion(message, suggestion), command=command)
+
+
+class BootstrapError(CLIError):
+    """Raised when config/logging bootstrap fails for a user-actionable reason."""

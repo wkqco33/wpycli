@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "wpycli"
-version = "0.1.5"
+version = "0.2.0"
 description = "Cobra-inspired CLI toolkit for Python"
 readme = "README.md"
 requires-python = ">=3.12"

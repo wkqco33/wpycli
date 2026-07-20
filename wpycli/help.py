@@ -31,13 +31,16 @@ def help_text(command: Command, terminal: Terminal | None = None) -> str:
 
     lines = [terminal.panel(command.full_path, summary_lines)]
 
-    if command.commands:
+    visible_commands = [child for child in command.commands if not child.hidden]
+    if visible_commands:
         rows: list[tuple[str, str]] = []
-        for child in command.commands:
+        for child in visible_commands:
             names = child.name
             if child.aliases:
                 names = f"{names} [{', '.join(child.aliases)}]"
             summary = child.short or child.long or ""
+            if child.deprecated:
+                summary = f"{summary} (deprecated)".strip()
             rows.append((names, summary))
         lines.extend(
             ["", terminal.section("Commands"), terminal.definition_list(rows)]
@@ -79,6 +82,8 @@ def help_text(command: Command, terminal: Terminal | None = None) -> str:
 def _format_flags(flags: tuple[Flag, ...]) -> list[tuple[str, str]]:
     lines: list[tuple[str, str]] = []
     for flag in sorted(flags, key=lambda item: item.name):
+        if flag.hidden:
+            continue
         names = [f"--{flag.name}"]
         if flag.shorthand:
             names.insert(0, f"-{flag.shorthand}")
@@ -86,7 +91,12 @@ def _format_flags(flags: tuple[Flag, ...]) -> list[tuple[str, str]]:
         if flag.takes_value:
             label = f"{label} {flag.metavar}"
         description = flag.help
-        if flag.default not in {None, False}:
+        if flag.required:
+            description = f"{description} (required)".strip()
+        elif flag.default not in {None, False}:
             description = f"{description} (default: {flag.default})".strip()
+        if flag.choices:
+            choices = ", ".join(str(choice) for choice in flag.choices)
+            description = f"{description} (choices: {choices})".strip()
         lines.append((label, description))
     return lines

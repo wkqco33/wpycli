@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from contextlib import redirect_stdout
+from contextlib import redirect_stderr, redirect_stdout
 import importlib.util
 import io
 import logging
@@ -72,6 +72,38 @@ class RuntimeIntegrationTests(unittest.TestCase):
 
         self.assertEqual(exit_code, 0)
         self.assertEqual(stdout.getvalue().strip(), "2.3.4")
+
+    def test_missing_config_file_is_reported_as_usage_error(self) -> None:
+        root = Command(use="app")
+        root.add_persistent_string_flag("config", help="Path to config file")
+        root.configure_runtime(config=ConfigSettings(file_flag="config"))
+        root.add_command(Command(use="show", run=lambda ctx: 0))
+
+        stdout = io.StringIO()
+        stderr = io.StringIO()
+        with redirect_stdout(stdout), redirect_stderr(stderr):
+            exit_code = root.execute(["--config", "/no/such/file.yaml", "show"])
+
+        self.assertEqual(exit_code, 2)
+        self.assertIn("+ Error ", stderr.getvalue())
+        self.assertNotIn("Traceback", stderr.getvalue())
+        self.assertNotIn("Traceback", stdout.getvalue())
+
+    def test_invalid_log_level_is_reported_as_usage_error(self) -> None:
+        root = Command(use="app")
+        root.add_persistent_string_flag("log-level", help="Override log level")
+        root.configure_runtime(logging=LoggingSettings(level_flag="log-level"))
+        root.add_command(Command(use="show", run=lambda ctx: 0))
+
+        stdout = io.StringIO()
+        stderr = io.StringIO()
+        with redirect_stdout(stdout), redirect_stderr(stderr):
+            exit_code = root.execute(["--log-level", "BOGUS", "show"])
+
+        self.assertEqual(exit_code, 2)
+        self.assertIn("+ Error ", stderr.getvalue())
+        self.assertNotIn("Traceback", stderr.getvalue())
+        self.assertNotIn("Traceback", stdout.getvalue())
 
 
 if __name__ == "__main__":

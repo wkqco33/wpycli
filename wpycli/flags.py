@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Callable
+from typing import Any, Callable, Sequence
 
 FlagParser = Callable[[str], Any]
 
@@ -20,6 +20,10 @@ _PARSERS: dict[str, FlagParser] = {
     "int": int,
     "float": float,
     "bool": _parse_bool,
+    # Count flags (-v, -vvv) are normally incremented directly by the parser
+    # rather than converted from a value; this parser only kicks in for the
+    # `--flag=N` spelling.
+    "count": int,
 }
 
 _METAVARS: dict[str, str] = {
@@ -27,7 +31,11 @@ _METAVARS: dict[str, str] = {
     "int": "INT",
     "float": "FLOAT",
     "bool": "BOOL",
+    "count": "COUNT",
 }
+
+# Flag kinds that never consume a following argv token (`--flag value`).
+_NO_VALUE_KINDS = {"bool", "count"}
 
 
 @dataclass(frozen=True, slots=True)
@@ -37,6 +45,9 @@ class Flag:
     help: str = ""
     default: Any = None
     shorthand: str | None = None
+    required: bool = False
+    choices: tuple[Any, ...] | None = None
+    hidden: bool = False
 
     def __post_init__(self) -> None:
         if not self.name or self.name.startswith("-"):
@@ -45,10 +56,14 @@ class Flag:
             raise ValueError(f"unsupported flag kind: {self.kind!r}")
         if self.shorthand is not None and len(self.shorthand) != 1:
             raise ValueError("flag shorthand must be a single character")
+        if self.choices and self.default is not None and self.default not in self.choices:
+            raise ValueError(
+                f"default {self.default!r} for --{self.name} is not one of {self.choices!r}"
+            )
 
     @property
     def takes_value(self) -> bool:
-        return self.kind != "bool"
+        return self.kind not in _NO_VALUE_KINDS
 
     @property
     def metavar(self) -> str:
@@ -81,9 +96,21 @@ class FlagSet:
         help: str = "",
         default: Any = None,
         shorthand: str | None = None,
+        required: bool = False,
+        choices: Sequence[Any] | None = None,
+        hidden: bool = False,
     ) -> Flag:
         return self.add(
-            Flag(name=name, kind=kind, help=help, default=default, shorthand=shorthand)
+            Flag(
+                name=name,
+                kind=kind,
+                help=help,
+                default=default,
+                shorthand=shorthand,
+                required=required,
+                choices=tuple(choices) if choices is not None else None,
+                hidden=hidden,
+            )
         )
 
     def get(self, name: str) -> Flag | None:

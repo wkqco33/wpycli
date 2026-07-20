@@ -11,7 +11,11 @@ def strip_ansi(text: str) -> str:
 
 
 def visual_width(text: str) -> int:
-    clean_text = strip_ansi(text)
+    # Combining sequences (e.g. NFD-decomposed Hangul jamo, as produced by
+    # macOS filesystem paths) must be composed first: measuring codepoint by
+    # codepoint on decomposed text overcounts, since individual jamo aren't
+    # classified as wide even though the composed syllable renders as one.
+    clean_text = unicodedata.normalize("NFC", strip_ansi(text))
     width = 0
     for char in clean_text:
         if unicodedata.east_asian_width(char) in ("W", "F", "A"):
@@ -24,7 +28,7 @@ def visual_width(text: str) -> int:
 def split_cjk_and_words(text: str) -> list[str]:
     sub_chunks = []
     current_word = []
-    for char in text:
+    for char in unicodedata.normalize("NFC", text):
         if unicodedata.east_asian_width(char) in ("W", "F", "A"):
             if current_word:
                 sub_chunks.append("".join(current_word))

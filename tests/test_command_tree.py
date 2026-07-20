@@ -67,6 +67,28 @@ class CommandTreeTests(unittest.TestCase):
         self.assertEqual(stdout.getvalue(), "")
         self.assertIn("unknown flag '--bogus'", stderr.getvalue())
         self.assertIn("+ Error ", stderr.getvalue())
+        # The message must be reported exactly once: a stray log line from
+        # the internal tracing logger duplicating the error panel is a bug.
+        self.assertEqual(stderr.getvalue().count("unknown flag '--bogus'"), 1)
+
+    def test_persistent_post_run_still_executes_when_handler_raises(self) -> None:
+        events: list[str] = []
+        root = Command(use="app")
+        root.persistent_pre_run = lambda ctx: events.append("pre")
+        root.persistent_post_run = lambda ctx: events.append("post")
+
+        def buggy_run(ctx):
+            raise RuntimeError("boom")
+
+        root.run = buggy_run
+
+        stdout = io.StringIO()
+        stderr = io.StringIO()
+        with redirect_stdout(stdout), redirect_stderr(stderr):
+            exit_code = root.execute([])
+
+        self.assertEqual(exit_code, 1)
+        self.assertEqual(events, ["pre", "post"])
 
     def test_unexpected_exception_returns_exit_code_1(self) -> None:
         root = Command(use="app")
@@ -82,6 +104,9 @@ class CommandTreeTests(unittest.TestCase):
         self.assertEqual(exit_code, 1)
         self.assertIn("System Error", stderr.getvalue())
         self.assertIn("division by zero", stderr.getvalue())
+        # A raw traceback must never reach the user's terminal.
+        self.assertNotIn("Traceback", stderr.getvalue())
+        self.assertNotIn("Traceback", stdout.getvalue())
 
     def test_lineage_and_full_path_cache(self) -> None:
         root = Command(use="app")

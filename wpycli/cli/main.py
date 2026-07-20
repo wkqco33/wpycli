@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from wpycli import Command
+from wpycli import Command, LoggingSettings
 from .init import build_init_command
 from .add import build_add_command
 
@@ -10,6 +10,16 @@ def build_cli() -> Command:
         use="wpycli",
         short="wpycli management tool",
         long="A tool to initialize and manage wpycli projects, inspired by cobra-cli.",
+    )
+    root.add_persistent_string_flag("log-level", help="Override the logging level")
+    root.add_persistent_string_flag("log-file", help="Write JSON logs to a file")
+
+    root.configure_runtime(
+        logging=LoggingSettings(
+            logger_name="wpycli.cli",
+            level_flag="log-level",
+            log_file_flag="log-file",
+        ),
     )
 
     root.add_command(
