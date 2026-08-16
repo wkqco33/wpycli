@@ -5,7 +5,7 @@ requires-python = ">=3.12"
 [[package]]
 name = "pyyaml"
 version = "6.0.3"
-source = { registry = "https://pypi.wkqcosoft.cloud/" }
+source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/05/8e/961c0007c59b8dd7729d542c61a4d537767a59645b82a0b521206e1e25c2/pyyaml-6.0.3.tar.gz", hash = "sha256:d76623373421df22fb4cf8817020cbb7ef15c725b9d5e45f17e189bfc384190f", size = 130960, upload-time = "2025-09-25T21:33:16.546Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/d1/33/422b98d2195232ca1826284a76852ad5a86fe23e31b009c9886b2d0fb8b2/pyyaml-6.0.3-cp312-cp312-macosx_10_13_x86_64.whl", hash = "sha256:7f047e29dcae44602496db43be01ad42fc6f1cc0d8cd6c83d342306c32270196", size = 182063, upload-time = "2025-09-25T21:32:11.445Z" },
@@ -49,37 +49,37 @@ wheels = [
 ]
 
 [[package]]
-name = "wconfig"
-version = "0.1.0"
-source = { registry = "https://pypi.wkqcosoft.cloud/" }
-dependencies = [
-    { name = "pyyaml" },
-]
-sdist = { url = "http://pypi.wkqcosoft.cloud/packages/wconfig-0.1.0.tar.gz", hash = "sha256:fe643ef1ec87c82c8dc57b1b595f508c1854db09feeaf00dacb128e48f6454aa" }
-wheels = [
-    { url = "http://pypi.wkqcosoft.cloud/packages/wconfig-0.1.0-py3-none-any.whl", hash = "sha256:05b290b7997298a744ea4731035bb096822263561481e675f9960e0024f5999d" },
-]
-
-[[package]]
-name = "wlogger"
-version = "0.2.0"
-source = { registry = "https://pypi.wkqcosoft.cloud/" }
-sdist = { url = "http://pypi.wkqcosoft.cloud/packages/wlogger-0.2.0.tar.gz", hash = "sha256:8a3b0734f78e63531533e6918ec5b2b3f9a13557589650a36de9cff101feda44" }
-wheels = [
-    { url = "http://pypi.wkqcosoft.cloud/packages/wlogger-0.2.0-py3-none-any.whl", hash = "sha256:d20e396dd9169466f1af503f7db8baf4e8e5b7da0f37e4bf5231be11b0596d4d" },
-]
-
-[[package]]
 name = "wpycli"
-version = "0.1.5"
+version = "0.2.0"
 source = { editable = "." }
 dependencies = [
-    { name = "wconfig" },
-    { name = "wlogger" },
+    { name = "wpyconf" },
+    { name = "wpylog" },
 ]
 
 [package.metadata]
 requires-dist = [
-    { name = "wconfig" },
-    { name = "wlogger" },
+    { name = "wpyconf" },
+    { name = "wpylog" },
+]
+
+[[package]]
+name = "wpyconf"
+version = "0.2.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "pyyaml" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/0b/fe/4f0ed8b388eb0209dd66c1f2e42d7f70fb2b171abc76f7d94442968cfc04/wpyconf-0.2.1.tar.gz", hash = "sha256:a3d611ee02c03401225bfada98e1b9a50097cc6b35c7a6f5d5339f15ef62a049", size = 9237, upload-time = "2026-08-16T09:36:56.537Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/b5/f2/b2fd4a17fd3211368795f65009ebcc40f0d55d31f3340a9aa2d5c2ae1549/wpyconf-0.2.1-py3-none-any.whl", hash = "sha256:c6fcf49b7c645912eba8c183a52a2dd67f0662aa341b9064cf1ee56c2ade2607", size = 11195, upload-time = "2026-08-16T09:36:55.397Z" },
+]
+
+[[package]]
+name = "wpylog"
+version = "0.2.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/20/55/047662539fedb708e21f7b7af2cf519b999a821b3ea943212b34eeaceee5/wpylog-0.2.0.tar.gz", hash = "sha256:81dd5c152814f3842d2b068134d8486ec9c5f8febaaf0cf0fe059b9340f22c7a", size = 6582, upload-time = "2026-08-16T09:48:50.582Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/17/d7/c496170c94b04b62c31c1c3dcc22b28bafd452f249a8dcb4cb79ae1b21ae/wpylog-0.2.0-py3-none-any.whl", hash = "sha256:baafcc210a57449f084d1c114ed6bb503d8e76f0a11abbc5551a3b550b7915a0", size = 8284, upload-time = "2026-08-16T09:48:49.449Z" },
 ]

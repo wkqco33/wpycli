@@ -9,7 +9,7 @@
 - **플래그 시스템**: local 플래그와 persistent 플래그 지원
 - **자동화된 도움말**: `--help`, `help`, `--version` 자동 처리
 - **유연한 훅**: 전처리와 후처리를 위한 훅 기반 실행 흐름
-- **런타임 부트스트랩**: `wconfig` 기반 계층형 설정 및 `wlogger` 기반 로깅 자동 구성
+- **런타임 부트스트랩**: PyPI 패키지 `wpyconf`와 `wpylog` 기반 계층형 설정 및 로깅 자동 구성
 - **경량 터미널**: `rich` 없이도 색상, 패널, 구조화된 help를 제공하는 내장 렌더러
 
 ## 설치 및 환경 구성
@@ -18,7 +18,7 @@
 
 ```bash
 # 프로젝트 다운로드 및 의존성 설치
-git clone <repository-url>
+git clone https://github.com/wkqco33/wpycli.git
 cd wpycli
 uv sync
 
@@ -35,8 +35,12 @@ uv pip install .
 새로운 CLI 프로젝트를 시작합니다.
 
 ```bash
-uv run wpycli init my-project
+mkdir my-project
+cd my-project
+uv run --project .. wpycli init my-project
 ```
+
+`init`은 현재 디렉터리에 프로젝트 파일을 생성하므로 비어 있는 디렉터리에서 실행합니다.
 
 - `main.py`: 엔트리포인트 파일 생성
 - `my_project/commands/root.py`: 루트 커맨드 정의 파일 생성
@@ -72,7 +76,7 @@ def build_cli() -> Command:
     root = Command(
         use="demo",
         short="Demo CLI",
-        version="0.1.0",
+        version="0.2.0",
     )
 
     root.add_persistent_string_flag("config", help="설정 파일 경로")
@@ -106,3 +110,7 @@ uv sync
 # 테스트 실행
 uv run python -m unittest discover -s tests
 ```
+
+## 라이선스
+
+이 프로젝트는 [MIT License](LICENSE)로 배포됩니다.

@@ -30,7 +30,7 @@ class ConfigSettings:
         try:
             from wconfig import load_config
         except ImportError as exc:
-            raise RuntimeError("wconfig must be installed to use configuration bootstrap") from exc
+            raise RuntimeError("wpyconf must be installed to use configuration bootstrap") from exc
 
         files = list(self.files)
         file_override = _flag_override(flag_values, self.file_flag)
@@ -68,7 +68,7 @@ class LoggingSettings:
         try:
             import wlogger
         except ImportError as exc:
-            raise RuntimeError("wlogger must be installed to use logging bootstrap") from exc
+            raise RuntimeError("wpylog must be installed to use logging bootstrap") from exc
 
         def from_config(key: str, default: Any = None) -> Any:
             if config is None:

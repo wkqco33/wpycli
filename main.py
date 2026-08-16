@@ -56,7 +56,7 @@ def build_cli() -> Command:
         use="wpycli",
         short="Cobra-inspired CLI toolkit for Python",
         long="A small Python CLI toolkit modeled after Cobra's command tree and execution flow.",
-        version="0.1.0",
+        version="0.2.0",
         persistent_pre_run=_log_command,
     )
     root.add_persistent_string_flag(
