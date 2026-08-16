@@ -1,7 +1,8 @@
 from __future__ import annotations
 
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass
-from typing import Any, Callable, Sequence
+from typing import Any
 
 FlagParser = Callable[[str], Any]
 
@@ -56,7 +57,11 @@ class Flag:
             raise ValueError(f"unsupported flag kind: {self.kind!r}")
         if self.shorthand is not None and len(self.shorthand) != 1:
             raise ValueError("flag shorthand must be a single character")
-        if self.choices and self.default is not None and self.default not in self.choices:
+        if (
+            self.choices
+            and self.default is not None
+            and self.default not in self.choices
+        ):
             raise ValueError(
                 f"default {self.default!r} for --{self.name} is not one of {self.choices!r}"
             )

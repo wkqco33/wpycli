@@ -1,17 +1,21 @@
 from __future__ import annotations
 
-from contextlib import redirect_stderr, redirect_stdout
 import io
 import os
-from pathlib import Path
 import tempfile
 import unittest
+from contextlib import redirect_stderr, redirect_stdout
+from pathlib import Path
 
 from wpycli.cli.add import build_add_command
 from wpycli.cli.init import build_init_command
 
 
 class _InTempDir:
+    def __init__(self) -> None:
+        self._cwd: str = ""
+        self._tmp: tempfile.TemporaryDirectory[str] | None = None
+
     def __enter__(self) -> Path:
         self._cwd = os.getcwd()
         self._tmp = tempfile.TemporaryDirectory()
@@ -20,7 +24,8 @@ class _InTempDir:
 
     def __exit__(self, *exc_info: object) -> None:
         os.chdir(self._cwd)
-        self._tmp.cleanup()
+        if self._tmp is not None:
+            self._tmp.cleanup()
 
 
 class AddCommandTests(unittest.TestCase):

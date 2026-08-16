@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-from contextlib import redirect_stderr, redirect_stdout
 import io
 import unittest
+from contextlib import redirect_stderr, redirect_stdout
 
 from wpycli import Command
 
@@ -12,13 +12,24 @@ class CommandTreeTests(unittest.TestCase):
         events: list[tuple[object, ...]] = []
 
         root = Command(use="app")
-        root.add_persistent_bool_flag("verbose", shorthand="v", help="Enable verbose output")
-        root.persistent_pre_run = lambda ctx: events.append(("root-pre", ctx.flags["verbose"]))
-        root.persistent_post_run = lambda ctx: events.append(("root-post", ctx.command.name))
+        root.add_persistent_bool_flag(
+            "verbose", shorthand="v", help="Enable verbose output"
+        )
+        root.persistent_pre_run = lambda ctx: events.append(
+            ("root-pre", ctx.flags["verbose"])
+        )
+        root.persistent_post_run = lambda ctx: events.append(
+            ("root-post", ctx.command.name)
+        )
 
         serve = Command(use="serve")
         serve.pre_run = lambda ctx: events.append(("serve-pre", tuple(ctx.args)))
-        serve.run = lambda ctx: events.append(("run", ctx.command.full_path, ctx.flags["verbose"], tuple(ctx.args))) or 7
+        serve.run = lambda ctx: (
+            events.append(
+                ("run", ctx.command.full_path, ctx.flags["verbose"], tuple(ctx.args))
+            )
+            or 7
+        )
         serve.post_run = lambda ctx: events.append(("serve-post", ctx.command.name))
         root.add_command(serve)
 
@@ -38,7 +49,9 @@ class CommandTreeTests(unittest.TestCase):
 
     def test_help_includes_local_and_inherited_flags(self) -> None:
         root = Command(use="app", short="Demo app")
-        root.add_persistent_bool_flag("verbose", shorthand="v", help="Enable verbose output")
+        root.add_persistent_bool_flag(
+            "verbose", shorthand="v", help="Enable verbose output"
+        )
         serve = Command(use="serve", short="Serve traffic")
         serve.add_int_flag("port", help="Port to bind", default=8080, shorthand="p")
         root.add_command(serve)
@@ -92,15 +105,17 @@ class CommandTreeTests(unittest.TestCase):
 
     def test_unexpected_exception_returns_exit_code_1(self) -> None:
         root = Command(use="app")
+
         def buggy_run(ctx):
             raise ZeroDivisionError("division by zero in handler")
+
         root.run = buggy_run
-        
+
         stdout = io.StringIO()
         stderr = io.StringIO()
         with redirect_stdout(stdout), redirect_stderr(stderr):
             exit_code = root.execute([])
-            
+
         self.assertEqual(exit_code, 1)
         self.assertIn("System Error", stderr.getvalue())
         self.assertIn("division by zero", stderr.getvalue())
@@ -111,10 +126,10 @@ class CommandTreeTests(unittest.TestCase):
     def test_lineage_and_full_path_cache(self) -> None:
         root = Command(use="app")
         child = Command(use="child")
-        
+
         self.assertEqual(child.full_path, "child")
         self.assertEqual(len(child.lineage()), 1)
-        
+
         root.add_command(child)
         self.assertEqual(child.full_path, "app child")
         self.assertEqual(len(child.lineage()), 2)

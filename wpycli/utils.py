@@ -44,14 +44,14 @@ def split_cjk_and_words(text: str) -> list[str]:
 def visual_wrap(text: str, width: int) -> list[str]:
     chunks = re.split(r"(\s+)", text)
     chunks = [c for c in chunks if c]
-    
+
     lines: list[str] = []
     current_line: list[str] = []
     current_width = 0
-    
+
     for chunk in chunks:
         chunk_width = visual_width(chunk)
-        
+
         if current_width + chunk_width <= width:
             current_line.append(chunk)
             current_width += chunk_width
@@ -69,7 +69,7 @@ def visual_wrap(text: str, width: int) -> list[str]:
                     lines.append("".join(current_line))
                     current_line = []
                     current_width = 0
-                
+
                 sub_chunks = split_cjk_and_words(chunk)
                 for sub_chunk in sub_chunks:
                     sub_width = visual_width(sub_chunk)
@@ -81,8 +81,8 @@ def visual_wrap(text: str, width: int) -> list[str]:
                             lines.append("".join(current_line))
                         current_line = [sub_chunk]
                         current_width = sub_width
-                        
+
     if current_line:
         lines.append("".join(current_line))
-        
+
     return lines

@@ -3,6 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from wpycli import Command, CommandContext, UsageError
+
 from .templates import CONFIG_TEMPLATE, MAIN_TEMPLATE, ROOT_COMMAND_TEMPLATE
 
 
@@ -63,7 +64,5 @@ def build_init_command() -> Command:
         run=_run_init,
     )
     cmd.add_bool_flag("force", shorthand="f", help="Overwrite existing files")
-    cmd.add_bool_flag(
-        "with-config", help="Also generate a starter config.yaml"
-    )
+    cmd.add_bool_flag("with-config", help="Also generate a starter config.yaml")
     return cmd

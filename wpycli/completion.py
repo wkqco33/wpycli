@@ -1,12 +1,13 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Iterator
+from collections.abc import Iterator
+from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from .command import Command
 
 
-def _walk(command: "Command") -> Iterator["Command"]:
+def _walk(command: Command) -> Iterator[Command]:
     yield command
     for child in command.commands:
         if child.hidden:
@@ -14,11 +15,11 @@ def _walk(command: "Command") -> Iterator["Command"]:
         yield from _walk(child)
 
 
-def _relative_path(command: "Command") -> tuple[str, ...]:
+def _relative_path(command: Command) -> tuple[str, ...]:
     return tuple(command.full_path.split()[1:])
 
 
-def generate_bash_completion(root: "Command") -> str:
+def generate_bash_completion(root: Command) -> str:
     """Static, name-based bash completion (subcommands + flag names only).
 
     Value completion (e.g. suggesting files for --config) is out of scope;
@@ -30,7 +31,7 @@ def generate_bash_completion(root: "Command") -> str:
     lines = [
         f"# bash completion for {root.name}",
         f"_{root.name}_complete() {{",
-        '    local cur cword',
+        "    local cur cword",
         '    cur="${COMP_WORDS[COMP_CWORD]}"',
         "    cword=$COMP_CWORD",
         "",
@@ -39,7 +40,11 @@ def generate_bash_completion(root: "Command") -> str:
     for node in _walk(root):
         key = " ".join(_relative_path(node))
         children = [child.name for child in node.commands if not child.hidden]
-        flags = [f"--{flag.name}" for flag in flags_for_help(node.lineage()) if not flag.hidden]
+        flags = [
+            f"--{flag.name}"
+            for flag in flags_for_help(node.lineage())
+            if not flag.hidden
+        ]
         options = " ".join(children + flags)
         lines.append(f'    _completions["{key}"]="{options}"')
 
@@ -63,7 +68,7 @@ def generate_bash_completion(root: "Command") -> str:
     return "\n".join(lines)
 
 
-def generate_zsh_completion(root: "Command") -> str:
+def generate_zsh_completion(root: Command) -> str:
     """zsh completion via bashcompinit, reusing the bash generator.
 
     Simpler and more maintainable than a native `_arguments`-based zsh
@@ -76,7 +81,7 @@ def generate_zsh_completion(root: "Command") -> str:
     )
 
 
-def generate_fish_completion(root: "Command") -> str:
+def generate_fish_completion(root: Command) -> str:
     """Static, name-based fish completion.
 
     `__fish_seen_subcommand_from` only checks whether a token appears
@@ -96,7 +101,9 @@ def generate_fish_completion(root: "Command") -> str:
         for child in node.commands:
             if child.hidden:
                 continue
-            lines.append(f'complete -c {root.name} -n "{condition}" -f -a "{child.name}"')
+            lines.append(
+                f'complete -c {root.name} -n "{condition}" -f -a "{child.name}"'
+            )
         for flag in flags_for_help(node.lineage()):
             if flag.hidden:
                 continue

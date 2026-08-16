@@ -1,10 +1,11 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
 import difflib
-from functools import lru_cache
 import logging
-from typing import Any, Iterable
+from collections.abc import Iterable
+from dataclasses import dataclass
+from functools import lru_cache
+from typing import Any
 
 from .command import INTERNAL_LOGGER_NAME, Command
 from .errors import UnknownCommandError, UnknownFlagError, UsageError
@@ -87,7 +88,9 @@ def resolve_invocation(command: Command, argv: list[str]) -> ResolvedInvocation:
 
         if current.commands and current.run is None and not args:
             raise UnknownCommandError(
-                token, command=current, suggestion=_suggest(token, _command_names(current))
+                token,
+                command=current,
+                suggestion=_suggest(token, _command_names(current)),
             )
 
         args.append(token)
@@ -126,13 +129,9 @@ def _consume_flag(
             )
         if flag.takes_value:
             raw_value = (
-                value
-                if has_value
-                else _next_flag_value(argv, index, flag, current)
+                value if has_value else _next_flag_value(argv, index, flag, current)
             )
-            parsed_flags[flag.name] = _convert_flag_value(
-                flag, raw_value, current
-            )
+            parsed_flags[flag.name] = _convert_flag_value(flag, raw_value, current)
             return (index + 1) if has_value else (index + 2), None
         if has_value:
             parsed_flags[flag.name] = _convert_flag_value(flag, value, current)
@@ -152,14 +151,10 @@ def _consume_flag(
         if flag.takes_value:
             attached = cluster[offset + 1 :]
             if attached:
-                parsed_flags[flag.name] = _convert_flag_value(
-                    flag, attached, current
-                )
+                parsed_flags[flag.name] = _convert_flag_value(flag, attached, current)
                 return index + 1, None
             raw_value = _next_flag_value(argv, index, flag, current)
-            parsed_flags[flag.name] = _convert_flag_value(
-                flag, raw_value, current
-            )
+            parsed_flags[flag.name] = _convert_flag_value(flag, raw_value, current)
             return index + 2, None
         _mark_flag_present(flag, parsed_flags)
         offset += 1
@@ -174,17 +169,13 @@ def _mark_flag_present(flag: Flag, parsed_flags: dict[str, Any]) -> None:
         parsed_flags[flag.name] = True
 
 
-def _next_flag_value(
-    argv: list[str], index: int, flag: Flag, command: Command
-) -> str:
+def _next_flag_value(argv: list[str], index: int, flag: Flag, command: Command) -> str:
     if index + 1 >= len(argv):
         raise UsageError(f"flag --{flag.name} requires a value", command=command)
     return argv[index + 1]
 
 
-def _convert_flag_value(
-    flag: Flag, raw_value: str, command: Command
-) -> Any:
+def _convert_flag_value(flag: Flag, raw_value: str, command: Command) -> Any:
     try:
         return flag.convert(raw_value)
     except ValueError as exc:
@@ -201,7 +192,9 @@ def _resolve_help_target(start: Command, tokens: list[str]) -> Command:
         child = target.find_subcommand(token)
         if child is None:
             raise UnknownCommandError(
-                token, command=target, suggestion=_suggest(token, _command_names(target))
+                token,
+                command=target,
+                suggestion=_suggest(token, _command_names(target)),
             )
         target = child
     return target
@@ -236,9 +229,7 @@ def _default_flag_values(lineage: tuple[Command, ...]) -> dict[str, Any]:
 
 
 @lru_cache(maxsize=128)
-def _flag_maps(
-    lineage: tuple[Command, ...]
-) -> tuple[dict[str, Flag], dict[str, Flag]]:
+def _flag_maps(lineage: tuple[Command, ...]) -> tuple[dict[str, Flag], dict[str, Flag]]:
     long_flags: dict[str, Flag] = {}
     short_flags: dict[str, Flag] = {}
     for flag in flags_for_help(lineage):

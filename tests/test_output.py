@@ -36,11 +36,14 @@ class TerminalTests(unittest.TestCase):
 
         lines = rendered.splitlines()
         from wpycli.utils import visual_width
-        
-        body_lines = [line if line.startswith("|") and line.endswith("|") else "" for line in lines]
+
+        body_lines = [
+            line if line.startswith("|") and line.endswith("|") else ""
+            for line in lines
+        ]
         body_lines = [line for line in body_lines if line]
         self.assertEqual(len(body_lines), 2)
-        
+
         width1 = visual_width(body_lines[0])
         width2 = visual_width(body_lines[1])
         self.assertEqual(width1, width2)

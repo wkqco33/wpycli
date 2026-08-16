@@ -2,9 +2,10 @@ from __future__ import annotations
 
 import io
 import unittest
+from typing import override
 from unittest.mock import patch
 
-from wpycli import Command, ProgressBar, Spinner, Terminal
+from wpycli import Command, CommandContext, ProgressBar, Spinner, Terminal
 from wpycli.utils import visual_width
 
 
@@ -27,12 +28,10 @@ class TableTests(unittest.TestCase):
             # Walk to the boundary offset; every row's 2nd column must start
             # at the exact same visual column regardless of Hangul width.
             acc = 0
-            idx = 0
             for ch in line:
                 if acc >= boundary:
                     break
                 acc += visual_width(ch)
-                idx += 1
             self.assertEqual(acc, boundary, msg=f"misaligned row: {line!r}")
 
     def test_header_separator_matches_header_width(self) -> None:
@@ -82,6 +81,7 @@ class SpinnerTests(unittest.TestCase):
 
     def test_tty_ticks_render_frames_and_clear_on_exit(self) -> None:
         class FakeTTY(io.StringIO):
+            @override
             def isatty(self) -> bool:
                 return True
 
@@ -113,14 +113,18 @@ class ProgressBarTests(unittest.TestCase):
 
 class NoColorFlagTests(unittest.TestCase):
     def test_enable_no_color_flag_strips_ansi_when_passed(self) -> None:
-        root = Command(
-            use="app", run=lambda ctx: print(ctx.terminal.style("x", "red"))
-        )
-        root.enable_no_color_flag()
+        def run(context: CommandContext) -> int:
+            terminal = context.terminal
+            assert terminal is not None
+            print(terminal.style("x", "red"))
+            return 0
+
+        root = Command(use="app", run=run)
+        _ = root.enable_no_color_flag()
 
         stdout = io.StringIO()
         with patch("sys.stdout", stdout):
-            root.execute(["--no-color"])
+            _ = root.execute(["--no-color"])
 
         self.assertNotIn("\x1b[", stdout.getvalue())
 
@@ -134,4 +138,4 @@ class NoColorFlagTests(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    unittest.main()
+    _ = unittest.main()

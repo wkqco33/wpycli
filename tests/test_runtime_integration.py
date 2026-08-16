@@ -1,20 +1,20 @@
 from __future__ import annotations
 
-from contextlib import redirect_stderr, redirect_stdout
 import importlib.util
 import io
 import logging
 import os
-from pathlib import Path
 import tempfile
 import unittest
+from contextlib import redirect_stderr, redirect_stdout
+from pathlib import Path
 from unittest.mock import patch
 
 from wpycli import Command, ConfigSettings, LoggingSettings
 
-
 RUNTIME_DEPS_AVAILABLE = (
-    importlib.util.find_spec("wconfig") is not None and importlib.util.find_spec("wlogger") is not None
+    importlib.util.find_spec("wconfig") is not None
+    and importlib.util.find_spec("wlogger") is not None
 )
 
 
@@ -57,7 +57,9 @@ class RuntimeIntegrationTests(unittest.TestCase):
             config_path = Path(tmpdir, "config.yaml")
             config_path.write_text("server:\n  host: file-host\n", encoding="utf-8")
             with patch.dict(os.environ, {"APP_SERVER__HOST": "env-host"}, clear=False):
-                exit_code = root.execute(["--config", str(config_path), "--log-level", "DEBUG", "show"])
+                exit_code = root.execute(
+                    ["--config", str(config_path), "--log-level", "DEBUG", "show"]
+                )
 
         self.assertEqual(exit_code, 0)
         self.assertEqual(captured["host"], "env-host")

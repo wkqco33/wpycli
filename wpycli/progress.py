@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import itertools
 import sys
-from typing import TextIO
+from typing import Self, TextIO
 
 from .utils import visual_width
 
@@ -30,7 +30,7 @@ class Spinner:
         self._frames = itertools.cycle(_SPINNER_FRAMES)
         self._done = False
 
-    def __enter__(self) -> "Spinner":
+    def __enter__(self) -> Self:
         if not self._is_tty:
             self._stream.write(f"{self.message}...\n")
             self._stream.flush()
@@ -68,7 +68,7 @@ class ProgressBar:
         self._is_tty = _is_tty(self._stream)
         self._last_reported_percent = -1
 
-    def __enter__(self) -> "ProgressBar":
+    def __enter__(self) -> Self:
         self._render()
         return self
 

@@ -2,7 +2,8 @@ from __future__ import annotations
 
 import logging
 import sys
-from typing import Any, Sequence
+from collections.abc import Sequence
+from typing import Any
 
 from .context import ArgsValidator, CommandContext, HookHandler, RunHandler
 from .errors import BootstrapError, CLIError, UsageError
@@ -74,7 +75,7 @@ class Command:
         self._full_path_cache = " ".join(command.name for command in self.lineage())
         return self._full_path_cache
 
-    def lineage(self) -> tuple["Command", ...]:
+    def lineage(self) -> tuple[Command, ...]:
         if self._lineage_cache is not None:
             return self._lineage_cache
         commands: list[Command] = []
@@ -85,7 +86,7 @@ class Command:
         self._lineage_cache = tuple(reversed(commands))
         return self._lineage_cache
 
-    def root(self) -> "Command":
+    def root(self) -> Command:
         command = self
         while command.parent is not None:
             command = command.parent
@@ -94,7 +95,7 @@ class Command:
     def matches(self, token: str) -> bool:
         return token == self.name or token in self.aliases
 
-    def add_command(self, *commands: "Command") -> "Command":
+    def add_command(self, *commands: Command) -> Command:
         taken = {
             name for child in self.commands for name in (child.name, *child.aliases)
         }
@@ -117,7 +118,7 @@ class Command:
         for command in self.commands:
             command._invalidate_lineage_cache()
 
-    def find_subcommand(self, token: str) -> "Command | None":
+    def find_subcommand(self, token: str) -> Command | None:
         for command in self.commands:
             if command.matches(token):
                 return command
@@ -128,12 +129,12 @@ class Command:
         *,
         config: ConfigSettings | None = None,
         logging: LoggingSettings | None = None,
-    ) -> "Command":
+    ) -> Command:
         self._config_settings = config
         self._logging_settings = logging
         return self
 
-    def enable_no_color_flag(self) -> "Command":
+    def enable_no_color_flag(self) -> Command:
         """Register a persistent `--no-color` flag. Opt-in: without calling
         this, only the `NO_COLOR` env var (already always respected) can
         disable color. Known gap: an invocation that fails to parse before
@@ -144,7 +145,7 @@ class Command:
         self.add_persistent_bool_flag("no-color", help="Disable colored output")
         return self
 
-    def add_completion_command(self) -> "Command":
+    def add_completion_command(self) -> Command:
         """Register a hidden `completion <bash|zsh|fish>` subcommand on this
         command that prints a static, name-based shell completion script.
         Opt-in: existing command trees are unaffected unless this is called.
@@ -284,7 +285,12 @@ class Command:
         hidden: bool = False,
     ) -> Flag:
         return self.add_flag(
-            name, kind="bool", help=help, default=default, shorthand=shorthand, hidden=hidden
+            name,
+            kind="bool",
+            help=help,
+            default=default,
+            shorthand=shorthand,
+            hidden=hidden,
         )
 
     def add_count_flag(
@@ -412,7 +418,7 @@ class Command:
         argv_list = list(sys.argv[1:] if argv is None else argv)
         stdout_terminal = Terminal(stream=sys.stdout)
         stderr_terminal = Terminal(stream=sys.stderr)
-        
+
         _logger.debug("Starting CLI execution with argv: %s", argv_list)
         try:
             resolved = resolve_invocation(self, argv_list)
@@ -454,8 +460,11 @@ class Command:
                     file=sys.stderr,
                 )
             runtime_owner = resolved.command._runtime_owner()
-            
-            _logger.debug("Bootstrapping runtime for owner: %s", runtime_owner.full_path if runtime_owner else "None")
+
+            _logger.debug(
+                "Bootstrapping runtime for owner: %s",
+                runtime_owner.full_path if runtime_owner else "None",
+            )
             try:
                 runtime = bootstrap_runtime(
                     command_name=resolved.command.full_path,
@@ -503,10 +512,14 @@ class Command:
             # internal file paths/implementation details straight to the
             # user's terminal. Full details are still available to anyone who
             # has wired up file logging with a debug level for this logger.
-            _logger.debug("Unexpected system error occurred during execution", exc_info=True)
+            _logger.debug(
+                "Unexpected system error occurred during execution", exc_info=True
+            )
             print(
-                stderr_terminal.message("error", "System Error", f"An unexpected error occurred: {exc}"),
-                file=sys.stderr
+                stderr_terminal.message(
+                    "error", "System Error", f"An unexpected error occurred: {exc}"
+                ),
+                file=sys.stderr,
             )
             return 1
 
@@ -543,17 +556,26 @@ class Command:
         try:
             for command in lineage:
                 if command.persistent_pre_run is not None:
-                    _logger.debug("Executing persistent_pre_run for command: %s", command.full_path)
+                    _logger.debug(
+                        "Executing persistent_pre_run for command: %s",
+                        command.full_path,
+                    )
                     command.persistent_pre_run(context)
             if context.command.pre_run is not None:
-                _logger.debug("Executing pre_run for command: %s", context.command.full_path)
+                _logger.debug(
+                    "Executing pre_run for command: %s", context.command.full_path
+                )
                 context.command.pre_run(context)
 
             _logger.debug("Running handler for command: %s", context.command.full_path)
-            result = context.command.run(context) if context.command.run is not None else 0
+            result = (
+                context.command.run(context) if context.command.run is not None else 0
+            )
 
             if context.command.post_run is not None:
-                _logger.debug("Executing post_run for command: %s", context.command.full_path)
+                _logger.debug(
+                    "Executing post_run for command: %s", context.command.full_path
+                )
                 context.command.post_run(context)
             return 0 if result is None else int(result)
         finally:
@@ -562,10 +584,13 @@ class Command:
             # must run even if the handler above raised.
             for command in reversed(lineage):
                 if command.persistent_post_run is not None:
-                    _logger.debug("Executing persistent_post_run for command: %s", command.full_path)
+                    _logger.debug(
+                        "Executing persistent_post_run for command: %s",
+                        command.full_path,
+                    )
                     command.persistent_post_run(context)
 
-    def _runtime_owner(self) -> "Command | None":
+    def _runtime_owner(self) -> Command | None:
         for command in reversed(self.lineage()):
             if (
                 command._config_settings is not None

@@ -1,8 +1,9 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
 import os
-from typing import Sequence, TextIO
+from collections.abc import Sequence
+from dataclasses import dataclass
+from typing import TextIO
 
 from .utils import visual_width, visual_wrap
 
@@ -86,11 +87,11 @@ class Terminal:
         lines = self._wrap_lines(body)
         stripped_widths = [visual_width(line) for line in lines]
         visible_width = max(stripped_widths, default=0)
-        
+
         title_width = visual_width(title)
         title_text = f" {title} "
         title_text_width = title_width + 2
-        
+
         visible_width = max(visible_width, title_text_width)
         horizontal = "-" * (visible_width + 2)
         top = f"+{horizontal}+"

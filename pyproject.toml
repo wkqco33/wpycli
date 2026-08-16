@@ -33,3 +33,35 @@ py-modules = ["main"]
 
 [tool.setuptools.packages.find]
 include = ["wpycli*"]
+
+[tool.ruff]
+target-version = "py312"
+line-length = 88
+extend-exclude = ["README.md"]
+
+[tool.ruff.lint]
+select = ["E4", "E7", "E9", "F", "I", "UP", "SIM", "PLW", "PYI"]
+
+[tool.ruff.format]
+quote-style = "double"
+
+[tool.basedpyright]
+include = ["wpycli", "tests"]
+pythonVersion = "3.12"
+typeCheckingMode = "standard"
+reportImportCycles = false
+
+[tool.coverage.run]
+branch = true
+source = ["wpycli"]
+
+[tool.coverage.report]
+fail_under = 88
+skip_covered = true
+
+[dependency-groups]
+dev = [
+    "basedpyright>=1.39.10",
+    "coverage>=7.15.4",
+    "ruff>=0.16.3",
+]

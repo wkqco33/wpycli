@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 import logging
+from collections.abc import Callable
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any, Callable
+from typing import TYPE_CHECKING, Any
 
 from .output import Terminal
 
@@ -16,7 +17,7 @@ ArgsValidator = Callable[[list[str]], None]
 
 @dataclass(slots=True)
 class CommandContext:
-    command: "Command"
+    command: Command
     argv: list[str]
     args: list[str]
     flags: dict[str, Any]

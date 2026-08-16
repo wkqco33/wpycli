@@ -1,8 +1,11 @@
 from __future__ import annotations
 
-from dataclasses import dataclass, field
 import logging
-from typing import Any, Mapping
+from collections.abc import Mapping
+from dataclasses import dataclass
+from typing import Any, Literal, cast
+
+LogLevel = Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
 
 
 def _flag_override(flag_values: Mapping[str, Any], flag_name: str | None) -> Any:
@@ -30,7 +33,9 @@ class ConfigSettings:
         try:
             from wconfig import load_config
         except ImportError as exc:
-            raise RuntimeError("wpyconf must be installed to use configuration bootstrap") from exc
+            raise RuntimeError(
+                "wpyconf must be installed to use configuration bootstrap"
+            ) from exc
 
         files = list(self.files)
         file_override = _flag_override(flag_values, self.file_flag)
@@ -56,7 +61,7 @@ class ConfigSettings:
 @dataclass(slots=True)
 class LoggingSettings:
     logger_name: str | None = None
-    default_level: str = "INFO"
+    default_level: LogLevel = "INFO"
     level_key: str = "logging.level"
     log_file_key: str = "logging.file"
     max_bytes_key: str = "logging.max_bytes"
@@ -64,24 +69,32 @@ class LoggingSettings:
     level_flag: str | None = None
     log_file_flag: str | None = None
 
-    def build(self, *, command_name: str, config: Any, flag_values: Mapping[str, Any]) -> logging.Logger:
+    def build(
+        self, *, command_name: str, config: Any, flag_values: Mapping[str, Any]
+    ) -> logging.Logger:
         try:
             import wlogger
         except ImportError as exc:
-            raise RuntimeError("wpylog must be installed to use logging bootstrap") from exc
+            raise RuntimeError(
+                "wpylog must be installed to use logging bootstrap"
+            ) from exc
 
         def from_config(key: str, default: Any = None) -> Any:
             if config is None:
                 return default
             return config.get(key, default)
 
-        level = _flag_override(flag_values, self.level_flag) or from_config(self.level_key, self.default_level)
-        log_file = _flag_override(flag_values, self.log_file_flag) or from_config(self.log_file_key)
+        level = _flag_override(flag_values, self.level_flag) or from_config(
+            self.level_key, self.default_level
+        )
+        log_file = _flag_override(flag_values, self.log_file_flag) or from_config(
+            self.log_file_key
+        )
         max_bytes = from_config(self.max_bytes_key, 10 * 1024 * 1024)
         backup_count = from_config(self.backup_count_key, 5)
 
         wlogger.setup(
-            level=str(level),
+            level=cast(LogLevel, str(level).upper()),
             log_file=log_file,
             max_bytes=int(max_bytes),
             backup_count=int(backup_count),
@@ -104,5 +117,11 @@ def bootstrap_runtime(
     logging_settings: LoggingSettings | None,
 ) -> RuntimeBundle:
     config = config_settings.build(flag_values) if config_settings else None
-    logger = logging_settings.build(command_name=command_name, config=config, flag_values=flag_values) if logging_settings else None
+    logger = (
+        logging_settings.build(
+            command_name=command_name, config=config, flag_values=flag_values
+        )
+        if logging_settings
+        else None
+    )
     return RuntimeBundle(config=config, logger=logger)

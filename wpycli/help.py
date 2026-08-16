@@ -42,9 +42,7 @@ def help_text(command: Command, terminal: Terminal | None = None) -> str:
             if child.deprecated:
                 summary = f"{summary} (deprecated)".strip()
             rows.append((names, summary))
-        lines.extend(
-            ["", terminal.section("Commands"), terminal.definition_list(rows)]
-        )
+        lines.extend(["", terminal.section("Commands"), terminal.definition_list(rows)])
 
     local_flags = tuple(command.persistent_flags) + tuple(command.flags)
     inherited_flags = inherited_persistent_flags(lineage)

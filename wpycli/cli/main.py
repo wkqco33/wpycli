@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 from wpycli import Command, LoggingSettings
-from .init import build_init_command
+
 from .add import build_add_command
+from .init import build_init_command
 
 
 def build_cli() -> Command:

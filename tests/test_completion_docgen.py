@@ -1,10 +1,10 @@
 from __future__ import annotations
 
-from contextlib import redirect_stdout
 import io
 import subprocess
 import tempfile
 import unittest
+from contextlib import redirect_stdout
 from pathlib import Path
 from shutil import which
 
@@ -42,7 +42,7 @@ class BashCompletionTests(unittest.TestCase):
     def test_generated_script_is_syntactically_valid(self) -> None:
         script = generate_bash_completion(_build_tree())
         result = subprocess.run(
-            ["bash", "-n"], input=script, text=True, capture_output=True
+            ["bash", "-n"], input=script, text=True, capture_output=True, check=False
         )
         self.assertEqual(result.returncode, 0, result.stderr)
 
@@ -59,7 +59,9 @@ class FishCompletionTests(unittest.TestCase):
     def test_includes_visible_commands_and_flags_not_hidden(self) -> None:
         script = generate_fish_completion(_build_tree())
 
-        self.assertIn('complete -c demo -n "__fish_use_subcommand" -f -a "serve"', script)
+        self.assertIn(
+            'complete -c demo -n "__fish_use_subcommand" -f -a "serve"', script
+        )
         self.assertIn(
             'complete -c demo -n "__fish_seen_subcommand_from serve" -l host', script
         )

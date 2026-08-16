@@ -3,6 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from wpycli import Command, CommandContext, UsageError
+
 from .templates import COMMAND_TEMPLATE
 
 
@@ -72,7 +73,9 @@ def _run_add(context: CommandContext) -> int:
                     break
 
             root_py.write_text("\n".join(lines) + "\n")
-            print(f"Updated {root_py.relative_to(target_dir)} to register {command_name}")
+            print(
+                f"Updated {root_py.relative_to(target_dir)} to register {command_name}"
+            )
     except OSError as exc:
         raise UsageError(f"Could not add command {command_name!r}: {exc}") from exc
 

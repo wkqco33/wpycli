@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-from contextlib import redirect_stderr, redirect_stdout
 import io
 import unittest
+from contextlib import redirect_stderr, redirect_stdout
 
 from wpycli import Command, exact_args, max_args, min_args, range_args
 
@@ -48,7 +48,9 @@ class RequiredAndChoicesFlagTests(unittest.TestCase):
 class CountFlagTests(unittest.TestCase):
     def test_repeated_shorthand_cluster_accumulates(self) -> None:
         captured: dict[str, object] = {}
-        root = Command(use="app", run=lambda ctx: captured.update(v=ctx.flags["verbose"]))
+        root = Command(
+            use="app", run=lambda ctx: captured.update(v=ctx.flags["verbose"])
+        )
         root.add_count_flag("verbose", shorthand="v")
 
         with redirect_stdout(io.StringIO()):
@@ -58,7 +60,9 @@ class CountFlagTests(unittest.TestCase):
 
     def test_repeated_long_flag_accumulates(self) -> None:
         captured: dict[str, object] = {}
-        root = Command(use="app", run=lambda ctx: captured.update(v=ctx.flags["verbose"]))
+        root = Command(
+            use="app", run=lambda ctx: captured.update(v=ctx.flags["verbose"])
+        )
         root.add_count_flag("verbose")
 
         with redirect_stdout(io.StringIO()):
@@ -68,7 +72,9 @@ class CountFlagTests(unittest.TestCase):
 
     def test_default_count_is_zero(self) -> None:
         captured: dict[str, object] = {}
-        root = Command(use="app", run=lambda ctx: captured.update(v=ctx.flags["verbose"]))
+        root = Command(
+            use="app", run=lambda ctx: captured.update(v=ctx.flags["verbose"])
+        )
         root.add_count_flag("verbose", shorthand="v")
 
         with redirect_stdout(io.StringIO()):
@@ -105,7 +111,9 @@ class HiddenAndDeprecatedTests(unittest.TestCase):
     def test_hidden_command_excluded_from_help(self) -> None:
         root = Command(use="app")
         root.add_command(Command(use="visible", short="visible cmd", run=lambda ctx: 0))
-        root.add_command(Command(use="secret", short="hidden cmd", run=lambda ctx: 0, hidden=True))
+        root.add_command(
+            Command(use="secret", short="hidden cmd", run=lambda ctx: 0, hidden=True)
+        )
 
         text = root.help_text()
         self.assertIn("visible", text)
@@ -122,7 +130,9 @@ class HiddenAndDeprecatedTests(unittest.TestCase):
 
     def test_deprecated_command_shows_warning_and_help_marker(self) -> None:
         root = Command(use="app")
-        old = Command(use="old", short="legacy", run=lambda ctx: 0, deprecated="use 'new' instead")
+        old = Command(
+            use="old", short="legacy", run=lambda ctx: 0, deprecated="use 'new' instead"
+        )
         root.add_command(old)
 
         self.assertIn("(deprecated)", root.help_text())

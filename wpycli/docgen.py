@@ -16,7 +16,7 @@ def _flag_line(flag: Flag) -> str:
     return f"- {names}: {flag.help}".rstrip(": ")
 
 
-def generate_markdown_docs(root: "Command", out_dir: str | Path) -> list[Path]:
+def generate_markdown_docs(root: Command, out_dir: str | Path) -> list[Path]:
     """Recursively write one Markdown file per (non-hidden) command.
 
     Reuses the same local-vs-inherited flag split and usage-string
@@ -30,10 +30,10 @@ def generate_markdown_docs(root: "Command", out_dir: str | Path) -> list[Path]:
     out_path.mkdir(parents=True, exist_ok=True)
     written: list[Path] = []
 
-    def _file_name(command: "Command") -> str:
+    def _file_name(command: Command) -> str:
         return f"{command.full_path.replace(' ', '_')}.md"
 
-    def _walk(command: "Command") -> None:
+    def _walk(command: Command) -> None:
         lines = [f"# {command.full_path}", "", "```", usage_text(command), "```", ""]
 
         if command.deprecated:
@@ -51,16 +51,22 @@ def generate_markdown_docs(root: "Command", out_dir: str | Path) -> list[Path]:
         if local_flags:
             lines.append("## Flags")
             lines.append("")
-            lines.extend(_flag_line(flag) for flag in sorted(local_flags, key=lambda f: f.name))
+            lines.extend(
+                _flag_line(flag) for flag in sorted(local_flags, key=lambda f: f.name)
+            )
             lines.append("")
 
         inherited = [
-            flag for flag in inherited_persistent_flags(command.lineage()) if not flag.hidden
+            flag
+            for flag in inherited_persistent_flags(command.lineage())
+            if not flag.hidden
         ]
         if inherited:
             lines.append("## Inherited Flags")
             lines.append("")
-            lines.extend(_flag_line(flag) for flag in sorted(inherited, key=lambda f: f.name))
+            lines.extend(
+                _flag_line(flag) for flag in sorted(inherited, key=lambda f: f.name)
+            )
             lines.append("")
 
         visible_children = [child for child in command.commands if not child.hidden]
