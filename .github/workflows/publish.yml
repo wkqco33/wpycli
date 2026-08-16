@@ -1,0 +1,44 @@
+name: Publish to PyPI
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    environment:
+      name: pypi
+      url: https://pypi.org/p/wpycli
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v6
+        with:
+          version: "latest"
+
+      - name: Set up Python
+        run: uv python install 3.12
+
+      - name: Install locked environment
+        run: uv sync --locked
+
+      - name: Verify tag matches package version
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          uv run python -c 'import os, pathlib, re, tomllib; version = tomllib.load(pathlib.Path("pyproject.toml").open("rb"))["project"]["version"]; tag_version = re.sub(r"^v", "", os.environ["RELEASE_TAG"]); assert tag_version == version, f"tag v{tag_version} does not match package version {version}"'
+
+      - name: Build distributions
+        run: uv run python -m build
+
+      - name: Validate package metadata
+        run: uv run twine check dist/*
+
+      - name: Publish distributions
+        uses: pypa/gh-action-pypi-publish@release/v1

@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=69"]
+requires = ["setuptools>=77"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -8,14 +8,14 @@ version = "0.2.0"
 description = "Cobra-inspired CLI toolkit for Python"
 readme = "README.md"
 requires-python = ">=3.12"
-license = { file = "LICENSE" }
+license = "MIT"
 authors = [{ name = "wkqco33" }]
 keywords = ["cli", "command-line", "cobra", "toolkit"]
 classifiers = [
     "Development Status :: 4 - Beta",
-    "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
     "Operating System :: OS Independent",
 ]
 dependencies = ["wpyconf", "wpylog"]
@@ -62,6 +62,8 @@ skip_covered = true
 [dependency-groups]
 dev = [
     "basedpyright>=1.39.10",
+    "build>=1.5.0",
     "coverage>=7.15.4",
     "ruff>=0.16.3",
+    "twine>=7.0.0",
 ]
