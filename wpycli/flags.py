@@ -21,9 +21,7 @@ _PARSERS: dict[str, FlagParser] = {
     "int": int,
     "float": float,
     "bool": _parse_bool,
-    # Count flags (-v, -vvv) are normally incremented directly by the parser
-    # rather than converted from a value; this parser only kicks in for the
-    # `--flag=N` spelling.
+    # Used when count flags are explicitly passed with values (e.g., --verbose=2).
     "count": int,
 }
 

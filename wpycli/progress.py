@@ -15,13 +15,7 @@ def _is_tty(stream: TextIO) -> bool:
 
 
 class Spinner:
-    """Manually-advanced spinner (call `.tick()` in your own loop).
-
-    No background thread: the caller controls pacing, which keeps this
-    dependency-free and avoids the usual thread/GIL edge cases of animated
-    terminal output. Falls back to a single static line when not a TTY
-    (piped output, log files, CI).
-    """
+    """Terminal spinner for indicating progress during synchronous operations."""
 
     def __init__(self, message: str, *, stream: TextIO | None = None) -> None:
         self.message = message
@@ -52,11 +46,7 @@ class Spinner:
 
 
 class ProgressBar:
-    """`[####------] 40%` progress bar, advanced via `.update(n)`.
-
-    On a non-TTY stream, redraws (`\\r`) are useless, so it instead prints
-    a plain line at roughly every 10% instead of animating in place.
-    """
+    """Terminal progress bar with TTY and non-TTY fallback rendering."""
 
     def __init__(
         self, total: int, *, width: int = 30, stream: TextIO | None = None

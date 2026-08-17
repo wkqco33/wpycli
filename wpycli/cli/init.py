@@ -13,20 +13,20 @@ def _run_init(context: CommandContext) -> int:
     force = bool(context.flags.get("force"))
     with_config = bool(context.flags.get("with-config"))
 
-    # 패키지 이름은 소문자와 언더스코어만 허용하는 관례를 따름
+    # Normalize package name to lower snake_case
     package_name = project_name.lower().replace("-", "_")
 
     print(f"Initializing {project_name} in {target_dir}...")
 
     try:
-        # 1. commands 디렉토리 생성
+        # 1. Create commands directory and package structure
         commands_dir = target_dir / package_name / "commands"
         commands_dir.mkdir(parents=True, exist_ok=True)
 
         (target_dir / package_name / "__init__.py").touch()
         (commands_dir / "__init__.py").touch()
 
-        # 2. root.py 생성
+        # 2. Create root.py
         root_py = commands_dir / "root.py"
         if force or not root_py.exists():
             root_py.write_text(
@@ -38,13 +38,13 @@ def _run_init(context: CommandContext) -> int:
             )
             print(f"  Created {root_py.relative_to(target_dir)}")
 
-        # 3. main.py 생성
+        # 3. Create main.py
         main_py = target_dir / "main.py"
         if force or not main_py.exists():
             main_py.write_text(MAIN_TEMPLATE.format(package_name=package_name))
             print(f"  Created {main_py.relative_to(target_dir)}")
 
-        # 4. (선택) config.yaml 생성
+        # 4. Optional starter config.yaml
         if with_config:
             config_path = target_dir / "config.yaml"
             if force or not config_path.exists():

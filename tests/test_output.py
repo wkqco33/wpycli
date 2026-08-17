@@ -65,13 +65,9 @@ class TerminalTests(unittest.TestCase):
         self.assertTrue(lines[1].startswith("  abc     English"))
 
     def test_visual_width_is_normalization_independent(self) -> None:
-        # macOS (and some copy/paste sources) hand back NFD-decomposed
-        # Hangul, where each syllable is 2-3 separate jamo codepoints
-        # instead of one composed character. The rendered glyph is
-        # identical either way, so the measured width must match too.
         composed = "설정"
         decomposed = unicodedata.normalize("NFD", composed)
-        self.assertNotEqual(composed, decomposed)  # sanity: forms differ
+        self.assertNotEqual(composed, decomposed)
         self.assertEqual(visual_width(composed), visual_width(decomposed))
 
     def test_panel_border_stays_aligned_with_nfd_korean_title(self) -> None:

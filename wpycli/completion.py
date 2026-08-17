@@ -20,12 +20,7 @@ def _relative_path(command: Command) -> tuple[str, ...]:
 
 
 def generate_bash_completion(root: Command) -> str:
-    """Static, name-based bash completion (subcommands + flag names only).
-
-    Value completion (e.g. suggesting files for --config) is out of scope;
-    this only helps discover subcommand and flag *names*. Requires bash 4+
-    (associative arrays).
-    """
+    """Generate a Bash completion script (requires Bash 4+)."""
     from .parser import flags_for_help
 
     lines = [
@@ -69,11 +64,7 @@ def generate_bash_completion(root: Command) -> str:
 
 
 def generate_zsh_completion(root: Command) -> str:
-    """zsh completion via bashcompinit, reusing the bash generator.
-
-    Simpler and more maintainable than a native `_arguments`-based zsh
-    completion, at the cost of zsh-specific niceties (inline descriptions).
-    """
+    """Generate a Zsh completion script using bashcompinit."""
     return (
         f"#compdef {root.name}\n"
         "autoload -U +X bashcompinit && bashcompinit\n\n"
@@ -82,12 +73,7 @@ def generate_zsh_completion(root: Command) -> str:
 
 
 def generate_fish_completion(root: Command) -> str:
-    """Static, name-based fish completion.
-
-    `__fish_seen_subcommand_from` only checks whether a token appears
-    anywhere on the line, not its exact position, so trees deeper than one
-    level get an approximation rather than exact positional completion.
-    """
+    """Generate a Fish completion script."""
     from .parser import flags_for_help
 
     lines = [f"# fish completion for {root.name}"]

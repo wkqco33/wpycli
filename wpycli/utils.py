@@ -11,10 +11,7 @@ def strip_ansi(text: str) -> str:
 
 
 def visual_width(text: str) -> int:
-    # Combining sequences (e.g. NFD-decomposed Hangul jamo, as produced by
-    # macOS filesystem paths) must be composed first: measuring codepoint by
-    # codepoint on decomposed text overcounts, since individual jamo aren't
-    # classified as wide even though the composed syllable renders as one.
+    # Normalize to NFC so decomposed sequences (e.g. NFD Hangul) are measured accurately.
     clean_text = unicodedata.normalize("NFC", strip_ansi(text))
     width = 0
     for char in clean_text:

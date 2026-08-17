@@ -65,5 +65,5 @@ Before creating the tag:
    git push origin vX.Y.Z
    ```
 
-The publish workflow uses PyPI Trusted Publishing via GitHub Actions; no PyPI token
+The publish workflow runs via GitHub Actions; no credentials or API tokens
 should be committed to the repository.

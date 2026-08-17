@@ -16,8 +16,7 @@ def _run_add(context: CommandContext) -> int:
     command_name = context.args[0].lower().replace("-", "_")
     target_dir = Path.cwd()
 
-    # 패키지 이름 찾기 (main.py에서 추측하거나 현재 디렉토리의 유일한 디렉토리 찾기)
-    # 일단 현재 디렉토리에 package_name/commands/root.py 가 있는지 확인
+    # Locate project package root by finding directory containing commands/root.py
     package_name = None
     for p in target_dir.iterdir():
         if p.is_dir() and (p / "commands" / "root.py").exists():
@@ -38,7 +37,7 @@ def _run_add(context: CommandContext) -> int:
         )
 
     try:
-        # 1. 커맨드 파일 생성
+        # 1. Create command file
         command_file.write_text(
             COMMAND_TEMPLATE.format(
                 command_name=command_name,
@@ -47,7 +46,7 @@ def _run_add(context: CommandContext) -> int:
         )
         print(f"Created {command_file.relative_to(target_dir)}")
 
-        # 2. root.py에 등록 시도 (간단한 문자열 치환 방식)
+        # 2. Register command in root.py
         root_py = commands_dir / "root.py"
         content = root_py.read_text()
 
@@ -57,7 +56,7 @@ def _run_add(context: CommandContext) -> int:
         register_line = f"    root.add_command(build_{command_name}_command())"
 
         if import_line not in content:
-            # 파일 시작 부분(import 섹션)에 추가
+            # Add import statement
             lines = content.splitlines()
             insert_idx = 0
             for i, line in enumerate(lines):
@@ -66,7 +65,7 @@ def _run_add(context: CommandContext) -> int:
                     break
             lines.insert(insert_idx, import_line)
 
-            # return root 직전에 등록 추가
+            # Add command registration before returning root
             for i, line in enumerate(lines):
                 if "return root" in line:
                     lines.insert(i, register_line)

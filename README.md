@@ -28,7 +28,7 @@ uv pip install .
 
 ## 프로젝트 관리 (CLI 도구)
 
-`wpycli` 관리 도구 또한 `uv run`을 통해 즉시 실행할 수 있습니다.
+`wpycli` 관리 도구를 사용하여 프로젝트 구조를 생성하고 서브 커맨드를 관리할 수 있습니다.
 
 ### 1. 프로젝트 초기화
 
@@ -37,7 +37,9 @@ uv pip install .
 ```bash
 mkdir my-project
 cd my-project
-uv run --project .. wpycli init my-project
+wpycli init my-project
+# 또는 uvx를 통한 직접 실행
+uvx wpycli init my-project
 ```
 
 `init`은 현재 디렉터리에 프로젝트 파일을 생성하므로 비어 있는 디렉터리에서 실행합니다.

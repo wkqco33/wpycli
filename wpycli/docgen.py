@@ -17,12 +17,7 @@ def _flag_line(flag: Flag) -> str:
 
 
 def generate_markdown_docs(root: Command, out_dir: str | Path) -> list[Path]:
-    """Recursively write one Markdown file per (non-hidden) command.
-
-    Reuses the same local-vs-inherited flag split and usage-string
-    construction as `wpycli.help`, so generated docs stay in sync with the
-    interactive `--help` output.
-    """
+    """Recursively generate Markdown documentation files for a command tree."""
     from .help import usage_text
     from .parser import inherited_persistent_flags
 

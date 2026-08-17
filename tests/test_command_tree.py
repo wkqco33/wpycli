@@ -80,8 +80,7 @@ class CommandTreeTests(unittest.TestCase):
         self.assertEqual(stdout.getvalue(), "")
         self.assertIn("unknown flag '--bogus'", stderr.getvalue())
         self.assertIn("+ Error ", stderr.getvalue())
-        # The message must be reported exactly once: a stray log line from
-        # the internal tracing logger duplicating the error panel is a bug.
+        # Verify the error is reported exactly once without duplication.
         self.assertEqual(stderr.getvalue().count("unknown flag '--bogus'"), 1)
 
     def test_persistent_post_run_still_executes_when_handler_raises(self) -> None:

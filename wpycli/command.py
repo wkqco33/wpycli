@@ -11,11 +11,7 @@ from .flags import Flag, FlagSet
 from .output import Terminal
 from .runtime import ConfigSettings, LoggingSettings, bootstrap_runtime
 
-# Internal framework tracing lives on its own logger name so it never collides
-# with an application logger configured via LoggingSettings(logger_name=...),
-# and it carries a NullHandler so logging.lastResort never fires (and leaks a
-# traceback to stderr) before the application has had a chance to configure
-# logging itself.
+# Internal framework logger with NullHandler to prevent unconfigured root logging leaks.
 INTERNAL_LOGGER_NAME = "wpycli._internal"
 _logger = logging.getLogger(INTERNAL_LOGGER_NAME)
 _logger.addHandler(logging.NullHandler())
@@ -135,21 +131,12 @@ class Command:
         return self
 
     def enable_no_color_flag(self) -> Command:
-        """Register a persistent `--no-color` flag. Opt-in: without calling
-        this, only the `NO_COLOR` env var (already always respected) can
-        disable color. Known gap: an invocation that fails to parse before
-        reaching this flag (e.g. an earlier unknown flag) still falls back
-        to env-var-only color detection for that error panel, since parsing
-        hasn't reached `--no-color` yet.
-        """
+        """Register a persistent `--no-color` flag to disable colored terminal output."""
         self.add_persistent_bool_flag("no-color", help="Disable colored output")
         return self
 
     def add_completion_command(self) -> Command:
-        """Register a hidden `completion <bash|zsh|fish>` subcommand on this
-        command that prints a static, name-based shell completion script.
-        Opt-in: existing command trees are unaffected unless this is called.
-        """
+        """Register a hidden `completion <bash|zsh|fish>` subcommand to generate shell completion scripts."""
         from .args import exact_args
         from .completion import (
             generate_bash_completion,
@@ -479,11 +466,7 @@ class Command:
             except CLIError:
                 raise
             except Exception as exc:
-                # Config/logging bootstrap failures (missing config file, bad
-                # YAML, invalid --log-level, missing optional dependency, ...)
-                # are almost always user-actionable, not framework bugs. Map
-                # them to a CLIError so they get the clean panel + exit code 2
-                # treatment instead of the generic "System Error" bucket.
+                # Map actionable bootstrap failures to BootstrapError for formatted CLI output.
                 raise BootstrapError(str(exc), command=resolved.command) from exc
             context = CommandContext(
                 command=resolved.command,
@@ -497,8 +480,6 @@ class Command:
             _logger.debug("Executing command logic...")
             return resolved.command._run(context)
         except CLIError as exc:
-            # The panel printed below is the user-facing report of this error;
-            # logging it again would just duplicate the same message on stderr.
             _logger.debug("CLI usage error: %s", exc)
             if str(exc):
                 print(
@@ -508,10 +489,7 @@ class Command:
                 print(stderr_terminal.muted(usage_text(exc.command)), file=sys.stderr)
             return exc.exit_code
         except Exception as exc:
-            # Deliberately no traceback here: printing exc_info would leak
-            # internal file paths/implementation details straight to the
-            # user's terminal. Full details are still available to anyone who
-            # has wired up file logging with a debug level for this logger.
+            # Hide traceback from terminal output while keeping full details in debug log.
             _logger.debug(
                 "Unexpected system error occurred during execution", exc_info=True
             )
@@ -579,9 +557,7 @@ class Command:
                 context.command.post_run(context)
             return 0 if result is None else int(result)
         finally:
-            # persistent_post_run pairs with persistent_pre_run for setup/
-            # teardown of shared resources (connections, locks, ...), so it
-            # must run even if the handler above raised.
+            # Ensure persistent_post_run hooks always execute for proper cleanup.
             for command in reversed(lineage):
                 if command.persistent_post_run is not None:
                     _logger.debug(
