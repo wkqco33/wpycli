@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "wpycli"
-version = "0.3.0"
+version = "0.3.1"
 description = "Cobra-inspired CLI toolkit for Python"
 readme = "README.md"
 requires-python = ">=3.12"
@@ -18,7 +18,7 @@ classifiers = [
     "Programming Language :: Python :: 3.13",
     "Operating System :: OS Independent",
 ]
-dependencies = ["wpyconf", "wpylog"]
+dependencies = ["wpyconf>=0.2.1,<0.3", "wpylog>=0.2.0,<0.3"]
 
 [project.urls]
 Homepage = "https://github.com/wkqco33/wpycli"

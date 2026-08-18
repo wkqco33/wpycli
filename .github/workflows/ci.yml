@@ -5,6 +5,9 @@ on:
     branches: ["master"]
   pull_request:
 
+permissions:
+  contents: read
+
 jobs:
   test:
     runs-on: ubuntu-latest
@@ -16,7 +19,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v6
         with:
-          version: "latest"
+          version: "0.12.5"
       - name: Set up Python
         run: uv python install ${{ matrix.python-version }}
       - name: Install dependencies
@@ -37,3 +40,8 @@ jobs:
         run: uv run python -m build
       - name: Validate package metadata
         run: uv run twine check dist/*
+      - name: Smoke test built wheel
+        run: |
+          python -m venv "$RUNNER_TEMP/wpycli-smoke"
+          "$RUNNER_TEMP/wpycli-smoke/bin/pip" install --no-deps dist/wpycli-*.whl
+          "$RUNNER_TEMP/wpycli-smoke/bin/python" -c "import wpycli; assert wpycli.__version__ == '0.3.1'"

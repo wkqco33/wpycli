@@ -4,13 +4,18 @@ import logging
 import re
 import sys
 from collections.abc import Sequence
-from typing import Any, TextIO
+from typing import TextIO
 
 from .context import ArgsValidator, CommandContext, HookHandler, RunHandler
 from .errors import BootstrapError, CLIError, UsageError
-from .flags import Flag, FlagSet
+from .flags import Flag, FlagSet, FlagValue
 from .output import Terminal
-from .runtime import ConfigSettings, LoggingSettings, bootstrap_runtime
+from .runtime import (
+    ConfigSettings,
+    LoggingSettings,
+    RuntimeSetupError,
+    bootstrap_runtime,
+)
 
 # Internal framework logger with NullHandler to prevent unconfigured root logging leaks.
 INTERNAL_LOGGER_NAME = "wpycli._internal"
@@ -104,17 +109,26 @@ class Command:
         taken = {
             name for child in self.commands for name in (child.name, *child.aliases)
         }
+        lineage = self.lineage()
+        pending_names: set[str] = set()
         for command in commands:
             if command.parent is not None:
                 raise ValueError(f"command {command.name!r} already has a parent")
+            if command in lineage:
+                raise ValueError(
+                    f"cannot add command {command.name!r} to itself or its descendant"
+                )
             names = {command.name, *command.aliases}
-            if taken & names:
-                duplicate = next(iter(taken & names))
+            duplicate_names = (taken | pending_names) & names
+            if duplicate_names:
+                duplicate = next(iter(duplicate_names))
                 raise ValueError(f"duplicate command name or alias: {duplicate}")
+            pending_names |= names
+
+        for command in commands:
             command.parent = self
             command._invalidate_lineage_cache()
             self.commands.append(command)
-            taken |= names
         return self
 
     def _invalidate_lineage_cache(self) -> None:
@@ -187,11 +201,11 @@ class Command:
         *,
         kind: str = "str",
         help: str = "",
-        default: Any = None,
+        default: FlagValue = None,
         shorthand: str | None = None,
         persistent: bool = False,
         required: bool = False,
-        choices: Sequence[Any] | None = None,
+        choices: Sequence[FlagValue] | None = None,
         hidden: bool = False,
     ) -> Flag:
         target = self.persistent_flags if persistent else self.flags
@@ -483,8 +497,7 @@ class Command:
                 )
             except CLIError:
                 raise
-            except Exception as exc:
-                # Map actionable bootstrap failures to BootstrapError for formatted CLI output.
+            except RuntimeSetupError as exc:
                 raise BootstrapError(str(exc), command=resolved.command) from exc
             context = CommandContext(
                 command=resolved.command,
@@ -544,7 +557,7 @@ class Command:
                     exc.command = self
                 raise
 
-    def _validate_flags(self, flag_values: dict[str, Any]) -> None:
+    def _validate_flags(self, flag_values: dict[str, FlagValue]) -> None:
         from .parser import flags_for_help
 
         for flag in flags_for_help(self.lineage()):

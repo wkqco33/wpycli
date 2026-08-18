@@ -3,9 +3,9 @@ from __future__ import annotations
 import re
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
-from typing import Any
 
-FlagParser = Callable[[str], Any]
+type FlagValue = str | int | float | bool | None
+FlagParser = Callable[[str], FlagValue]
 
 
 def _parse_bool(raw: str) -> bool:
@@ -43,10 +43,10 @@ class Flag:
     name: str
     kind: str = "str"
     help: str = ""
-    default: Any = None
+    default: FlagValue = None
     shorthand: str | None = None
     required: bool = False
-    choices: tuple[Any, ...] | None = None
+    choices: tuple[FlagValue, ...] | None = None
     hidden: bool = False
 
     def __post_init__(self) -> None:
@@ -57,6 +57,16 @@ class Flag:
             raise ValueError("flag name must be a shell-safe long name")
         if self.kind not in _PARSERS:
             raise ValueError(f"unsupported flag kind: {self.kind!r}")
+        if self.default is not None and not _matches_kind(self.kind, self.default):
+            raise ValueError(
+                f"default {self.default!r} is not valid for {self.kind} flag "
+                f"--{self.name}"
+            )
+        for choice in self.choices or ():
+            if not _matches_kind(self.kind, choice):
+                raise ValueError(
+                    f"choice {choice!r} is not valid for {self.kind} flag --{self.name}"
+                )
         if self.shorthand is not None and (
             len(self.shorthand) != 1
             or re.fullmatch(r"[A-Za-z0-9_]", self.shorthand) is None
@@ -79,8 +89,20 @@ class Flag:
     def metavar(self) -> str:
         return _METAVARS[self.kind]
 
-    def convert(self, raw: str) -> Any:
+    def convert(self, raw: str) -> FlagValue:
         return _PARSERS[self.kind](raw)
+
+
+def _matches_kind(kind: str, value: FlagValue) -> bool:
+    if kind == "str":
+        return isinstance(value, str)
+    if kind in {"int", "count"}:
+        return type(value) is int
+    if kind == "float":
+        return type(value) in {int, float}
+    if kind == "bool":
+        return type(value) is bool
+    return False
 
 
 class FlagSet:
@@ -104,10 +126,10 @@ class FlagSet:
         *,
         kind: str = "str",
         help: str = "",
-        default: Any = None,
+        default: FlagValue = None,
         shorthand: str | None = None,
         required: bool = False,
-        choices: Sequence[Any] | None = None,
+        choices: Sequence[FlagValue] | None = None,
         hidden: bool = False,
     ) -> Flag:
         return self.add(
@@ -132,7 +154,7 @@ class FlagSet:
             return None
         return self._flags[name]
 
-    def defaults(self) -> dict[str, Any]:
+    def defaults(self) -> dict[str, FlagValue]:
         return {flag.name: flag.default for flag in self}
 
     def __iter__(self):

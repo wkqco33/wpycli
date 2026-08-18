@@ -147,6 +147,24 @@ class CommandTreeTests(unittest.TestCase):
         self.assertEqual(child.full_path, "app child")
         self.assertEqual(len(child.lineage()), 2)
 
+    def test_add_command_rejects_cycles(self) -> None:
+        root = Command(use="app")
+        child = Command(use="child")
+        root.add_command(child)
+
+        with self.assertRaisesRegex(ValueError, "itself or its descendant"):
+            root.add_command(root)
+        with self.assertRaisesRegex(ValueError, "itself or its descendant"):
+            child.add_command(root)
+
+    def test_add_command_is_atomic_when_a_later_command_is_invalid(self) -> None:
+        root = Command(use="app")
+
+        with self.assertRaisesRegex(ValueError, "duplicate command"):
+            root.add_command(Command(use="first"), Command(use="first"))
+
+        self.assertEqual(root.commands, [])
+
 
 if __name__ == "__main__":
     unittest.main()

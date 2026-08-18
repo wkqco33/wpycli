@@ -41,7 +41,7 @@ from wpycli import Command, CommandContext
 
 
 def _run_{command_name}(context: CommandContext) -> int:
-    print(f"Executing {command_name}...")
+    print(f"Executing {command_name}...", file=context.stdout)
     return 0
 
 

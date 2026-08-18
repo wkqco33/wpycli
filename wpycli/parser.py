@@ -4,11 +4,10 @@ import difflib
 import logging
 from collections.abc import Iterable
 from dataclasses import dataclass
-from typing import Any
 
 from .command import INTERNAL_LOGGER_NAME, Command
 from .errors import UnknownCommandError, UnknownFlagError, UsageError
-from .flags import Flag
+from .flags import Flag, FlagValue
 
 _logger = logging.getLogger(INTERNAL_LOGGER_NAME)
 
@@ -31,7 +30,7 @@ class ResolvedInvocation:
     command: Command
     lineage: tuple[Command, ...]
     args: list[str]
-    flags: dict[str, Any]
+    flags: dict[str, FlagValue]
     show_help: bool = False
     show_version: bool = False
 
@@ -40,7 +39,7 @@ def resolve_invocation(command: Command, argv: list[str]) -> ResolvedInvocation:
     _logger.debug("Resolving invocation: argv=%s", argv)
     current = command
     args: list[str] = []
-    parsed_flags: dict[str, Any] = {}
+    parsed_flags: dict[str, FlagValue] = {}
     index = 0
     flag_maps = _flag_maps(current.lineage())
 
@@ -104,7 +103,7 @@ def _consume_flag(
     argv: list[str],
     index: int,
     current: Command,
-    parsed_flags: dict[str, Any],
+    parsed_flags: dict[str, FlagValue],
     flag_maps: tuple[dict[str, Flag], dict[str, Flag]],
     root_command: Command,
 ) -> tuple[int, str | None]:
@@ -161,9 +160,12 @@ def _consume_flag(
     return index + 1, None
 
 
-def _mark_flag_present(flag: Flag, parsed_flags: dict[str, Any]) -> None:
+def _mark_flag_present(flag: Flag, parsed_flags: dict[str, FlagValue]) -> None:
     if flag.kind == "count":
-        parsed_flags[flag.name] = parsed_flags.get(flag.name, 0) + 1
+        current = parsed_flags.get(flag.name, 0)
+        if not isinstance(current, int):
+            raise TypeError(f"count flag --{flag.name} has a non-integer value")
+        parsed_flags[flag.name] = current + 1
     else:
         parsed_flags[flag.name] = True
 
@@ -174,7 +176,7 @@ def _next_flag_value(argv: list[str], index: int, flag: Flag, command: Command) 
     return argv[index + 1]
 
 
-def _convert_flag_value(flag: Flag, raw_value: str, command: Command) -> Any:
+def _convert_flag_value(flag: Flag, raw_value: str, command: Command) -> FlagValue:
     try:
         return flag.convert(raw_value)
     except ValueError as exc:
@@ -201,7 +203,7 @@ def _resolve_help_target(start: Command, tokens: list[str]) -> Command:
 
 def _build_invocation(
     command: Command,
-    parsed_flags: dict[str, Any],
+    parsed_flags: dict[str, FlagValue],
     *,
     args: list[str] | None = None,
     show_help: bool = False,
@@ -220,8 +222,8 @@ def _build_invocation(
     )
 
 
-def _default_flag_values(lineage: tuple[Command, ...]) -> dict[str, Any]:
-    defaults: dict[str, Any] = {}
+def _default_flag_values(lineage: tuple[Command, ...]) -> dict[str, FlagValue]:
+    defaults: dict[str, FlagValue] = {}
     for flag in flags_for_help(lineage):
         defaults.setdefault(flag.name, flag.default)
     return defaults

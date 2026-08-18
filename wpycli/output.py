@@ -56,7 +56,7 @@ class Terminal:
         if self.stream is None:
             return False
         isatty = getattr(self.stream, "isatty", None)
-        if callable(isatty) and not isatty():
+        if not callable(isatty) or not isatty():
             return False
         return os.environ.get("TERM", "dumb") != "dumb"
 

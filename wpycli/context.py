@@ -5,6 +5,7 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, TextIO
 
+from .flags import FlagValue
 from .output import Terminal
 
 if TYPE_CHECKING:
@@ -20,7 +21,7 @@ class CommandContext:
     command: Command
     argv: list[str]
     args: list[str]
-    flags: dict[str, Any]
+    flags: dict[str, FlagValue]
     config: Any = None
     logger: logging.Logger | None = None
     terminal: Terminal | None = None

@@ -4,6 +4,7 @@ from pathlib import Path
 
 from wpycli import Command, CommandContext, UsageError, max_args
 
+from .files import atomic_write_files
 from .naming import normalize_identifier
 from .templates import CONFIG_TEMPLATE, MAIN_TEMPLATE, ROOT_COMMAND_TEMPLATE
 
@@ -24,37 +25,38 @@ def _run_init(context: CommandContext) -> int:
         commands_dir = target_dir / package_name / "commands"
         commands_dir.mkdir(parents=True, exist_ok=True)
 
-        (target_dir / package_name / "__init__.py").touch()
-        (commands_dir / "__init__.py").touch()
+        files_to_write: dict[Path, str] = {}
+        package_init = target_dir / package_name / "__init__.py"
+        commands_init = commands_dir / "__init__.py"
+        if not package_init.exists():
+            files_to_write[package_init] = ""
+        if not commands_init.exists():
+            files_to_write[commands_init] = ""
 
         # 2. Create root.py
         root_py = commands_dir / "root.py"
         if force or not root_py.exists():
-            root_py.write_text(
-                ROOT_COMMAND_TEMPLATE.format(
-                    project_name=project_name,
-                    short_description=f"{project_name} CLI tool",
-                    long_description=f"{project_name} is a CLI tool built with wpycli.",
-                ),
-                encoding="utf-8",
+            files_to_write[root_py] = ROOT_COMMAND_TEMPLATE.format(
+                project_name=project_name,
+                short_description=f"{project_name} CLI tool",
+                long_description=f"{project_name} is a CLI tool built with wpycli.",
             )
-            print(f"  Created {root_py.relative_to(target_dir)}", file=stream)
 
         # 3. Create main.py
         main_py = target_dir / "main.py"
         if force or not main_py.exists():
-            main_py.write_text(
-                MAIN_TEMPLATE.format(package_name=package_name),
-                encoding="utf-8",
-            )
-            print(f"  Created {main_py.relative_to(target_dir)}", file=stream)
+            files_to_write[main_py] = MAIN_TEMPLATE.format(package_name=package_name)
 
         # 4. Optional starter config.yaml
         if with_config:
             config_path = target_dir / "config.yaml"
             if force or not config_path.exists():
-                config_path.write_text(CONFIG_TEMPLATE, encoding="utf-8")
-                print(f"  Created {config_path.relative_to(target_dir)}", file=stream)
+                files_to_write[config_path] = CONFIG_TEMPLATE
+
+        atomic_write_files(files_to_write)
+        for path in files_to_write:
+            if path not in {package_init, commands_init}:
+                print(f"  Created {path.relative_to(target_dir)}", file=stream)
     except OSError as exc:
         raise UsageError(f"Could not initialize {project_name!r}: {exc}") from exc
 

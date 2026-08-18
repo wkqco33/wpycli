@@ -749,7 +749,7 @@ wheels = [
 
 [[package]]
 name = "wpycli"
-version = "0.3.0"
+version = "0.3.1"
 source = { editable = "." }
 dependencies = [
     { name = "wpyconf" },
@@ -767,8 +767,8 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "wpyconf" },
-    { name = "wpylog" },
+    { name = "wpyconf", specifier = ">=0.2.1,<0.3" },
+    { name = "wpylog", specifier = ">=0.2.0,<0.3" },
 ]
 
 [package.metadata.requires-dev]

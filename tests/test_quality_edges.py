@@ -6,8 +6,17 @@ import tempfile
 import unittest
 from contextlib import redirect_stderr, redirect_stdout
 from pathlib import Path
+from unittest.mock import patch
 
-from wpycli import Command, UnknownCommandError, UnknownFlagError, UsageError
+from wpycli import (
+    Command,
+    ProgressBar,
+    Terminal,
+    UnknownCommandError,
+    UnknownFlagError,
+    UsageError,
+)
+from wpycli.cli.files import atomic_write_files
 from wpycli.cli.main import build_cli
 from wpycli.flags import Flag, FlagSet
 from wpycli.parser import resolve_invocation
@@ -63,6 +72,14 @@ class FlagEdgeTests(unittest.TestCase):
             Flag("name", kind="path")
         with self.assertRaisesRegex(ValueError, "invalid boolean"):
             Flag("enabled", kind="bool").convert("maybe")
+
+    def test_flag_defaults_and_choices_match_declared_kind(self) -> None:
+        with self.assertRaisesRegex(ValueError, "not valid for int flag"):
+            Flag("port", kind="int", default="8080")
+        with self.assertRaisesRegex(ValueError, "not valid for int flag"):
+            Flag("port", kind="int", choices=("8080",))
+        with self.assertRaisesRegex(ValueError, "not valid for bool flag"):
+            Flag("enabled", kind="bool", default=1)
 
     def test_flag_set_lookup_defaults_and_duplicates(self) -> None:
         flags = FlagSet()
@@ -185,6 +202,61 @@ class ManagementCLIQualityTests(unittest.TestCase):
 
         self.assertEqual(exit_code, 2)
         self.assertIn("Usage: wpycli add", stderr.getvalue())
+
+    def test_add_does_not_create_a_file_when_root_cannot_be_registered(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root_py = Path(temporary, "demo", "commands", "root.py")
+            root_py.parent.mkdir(parents=True)
+            root_py.write_text("def build_cli():\n    return None\n", encoding="utf-8")
+
+            original_cwd = os.getcwd()
+            try:
+                os.chdir(temporary)
+                stderr = io.StringIO()
+                with redirect_stdout(io.StringIO()), redirect_stderr(stderr):
+                    exit_code = build_cli().execute(["add", "serve"])
+            finally:
+                os.chdir(original_cwd)
+
+            self.assertEqual(exit_code, 2)
+            self.assertIn("expected a `return root` line", stderr.getvalue())
+            self.assertFalse(Path(temporary, "demo", "commands", "serve.py").exists())
+
+
+class OutputAndProgressQualityTests(unittest.TestCase):
+    def test_non_tty_stream_never_enables_implicit_color(self) -> None:
+        with patch.dict(os.environ, {"TERM": "xterm-256color"}):
+            terminal = Terminal(stream=io.StringIO())
+            self.assertFalse(terminal.supports_color)
+
+    def test_progress_rejects_invalid_dimensions_and_updates(self) -> None:
+        with self.assertRaisesRegex(ValueError, "total must be positive"):
+            ProgressBar(0)
+        with self.assertRaisesRegex(ValueError, "width must be positive"):
+            ProgressBar(1, width=0)
+
+        progress = ProgressBar(1, stream=io.StringIO())
+        with self.assertRaisesRegex(ValueError, "amount must not be negative"):
+            progress.update(-1)
+
+    def test_atomic_file_writes_restore_originals_on_commit_failure(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            first = Path(temporary, "first.txt")
+            second = Path(temporary, "second.txt")
+            first.write_text("old first", encoding="utf-8")
+            second.write_text("old second", encoding="utf-8")
+
+            with (
+                patch(
+                    "wpycli.cli.files.os.replace",
+                    side_effect=[None, OSError("simulated failure")],
+                ),
+                self.assertRaisesRegex(OSError, "simulated failure"),
+            ):
+                atomic_write_files({first: "new first", second: "new second"})
+
+            self.assertEqual(first.read_text(encoding="utf-8"), "old first")
+            self.assertEqual(second.read_text(encoding="utf-8"), "old second")
 
 
 if __name__ == "__main__":

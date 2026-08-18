@@ -5,10 +5,18 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 from typing import Any, Literal, cast
 
+from .flags import FlagValue
+
 LogLevel = Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
 
 
-def _flag_override(flag_values: Mapping[str, Any], flag_name: str | None) -> Any:
+class RuntimeSetupError(RuntimeError):
+    """Raised for expected configuration or logging bootstrap failures."""
+
+
+def _flag_override(
+    flag_values: Mapping[str, FlagValue], flag_name: str | None
+) -> FlagValue:
     if not flag_name:
         return None
     value = flag_values.get(flag_name)
@@ -29,11 +37,11 @@ class ConfigSettings:
     file_flag: str | None = None
     dotenv_flag: str | None = None
 
-    def build(self, flag_values: Mapping[str, Any]) -> Any:
+    def build(self, flag_values: Mapping[str, FlagValue]) -> Any:
         try:
             from wconfig import load_config
         except ImportError as exc:
-            raise RuntimeError(
+            raise RuntimeSetupError(
                 "wpyconf must be installed to use configuration bootstrap"
             ) from exc
 
@@ -70,12 +78,16 @@ class LoggingSettings:
     log_file_flag: str | None = None
 
     def build(
-        self, *, command_name: str, config: Any, flag_values: Mapping[str, Any]
+        self,
+        *,
+        command_name: str,
+        config: Any,
+        flag_values: Mapping[str, FlagValue],
     ) -> logging.Logger:
         try:
             import wlogger
         except ImportError as exc:
-            raise RuntimeError(
+            raise RuntimeSetupError(
                 "wpylog must be installed to use logging bootstrap"
             ) from exc
 
@@ -87,9 +99,10 @@ class LoggingSettings:
         level = _flag_override(flag_values, self.level_flag) or from_config(
             self.level_key, self.default_level
         )
-        log_file = _flag_override(flag_values, self.log_file_flag) or from_config(
+        log_file_value = _flag_override(flag_values, self.log_file_flag) or from_config(
             self.log_file_key
         )
+        log_file = None if log_file_value is None else str(log_file_value)
         max_bytes = from_config(self.max_bytes_key, 10 * 1024 * 1024)
         backup_count = from_config(self.backup_count_key, 5)
 
@@ -112,16 +125,21 @@ class RuntimeBundle:
 def bootstrap_runtime(
     *,
     command_name: str,
-    flag_values: Mapping[str, Any],
+    flag_values: Mapping[str, FlagValue],
     config_settings: ConfigSettings | None,
     logging_settings: LoggingSettings | None,
 ) -> RuntimeBundle:
-    config = config_settings.build(flag_values) if config_settings else None
-    logger = (
-        logging_settings.build(
-            command_name=command_name, config=config, flag_values=flag_values
+    try:
+        config = config_settings.build(flag_values) if config_settings else None
+        logger = (
+            logging_settings.build(
+                command_name=command_name, config=config, flag_values=flag_values
+            )
+            if logging_settings
+            else None
         )
-        if logging_settings
-        else None
-    )
+    except RuntimeSetupError:
+        raise
+    except (KeyError, OSError, TypeError, ValueError) as exc:
+        raise RuntimeSetupError(str(exc)) from exc
     return RuntimeBundle(config=config, logger=logger)

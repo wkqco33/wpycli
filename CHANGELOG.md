@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.3.1] - 2026-08-18
+
+- Validate flag types and harden command-tree mutations.
+- Make project scaffolding updates deterministic and rollback-safe.
+- Improve terminal and progress validation, runtime error boundaries, and CI reproducibility.
+
 ## [0.3.0] - 2026-08-18
 
 - Hardened project and command scaffolding against invalid names and path traversal.

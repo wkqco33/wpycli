@@ -60,6 +60,7 @@ class AddCommandTests(unittest.TestCase):
             self.assertEqual(add_exit, 0)
             command_file = tmp / "demo" / "commands" / "serve.py"
             self.assertTrue(command_file.exists())
+            self.assertIn("file=context.stdout", command_file.read_text())
             root_contents = (tmp / "demo" / "commands" / "root.py").read_text()
             self.assertIn("build_serve_command", root_contents)
 

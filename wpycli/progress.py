@@ -51,7 +51,11 @@ class ProgressBar:
     def __init__(
         self, total: int, *, width: int = 30, stream: TextIO | None = None
     ) -> None:
-        self.total = max(total, 1)
+        if total <= 0:
+            raise ValueError("total must be positive")
+        if width <= 0:
+            raise ValueError("width must be positive")
+        self.total = total
         self.current = 0
         self._width = width
         self._stream = stream if stream is not None else sys.stdout
@@ -63,6 +67,8 @@ class ProgressBar:
         return self
 
     def update(self, amount: int = 1) -> None:
+        if amount < 0:
+            raise ValueError("amount must not be negative")
         self.current = min(self.total, self.current + amount)
         self._render()
 
