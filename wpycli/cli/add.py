@@ -4,17 +4,25 @@ from pathlib import Path
 
 from wpycli import Command, CommandContext, UsageError
 
+from .naming import normalize_identifier
 from .templates import COMMAND_TEMPLATE
 
 
 def _require_command_name(args: list[str]) -> None:
     if not args:
         raise UsageError("command name is required")
+    if len(args) > 1:
+        raise UsageError("accepts exactly one command name")
 
 
 def _run_add(context: CommandContext) -> int:
-    command_name = context.args[0].lower().replace("-", "_")
+    command_name = normalize_identifier(
+        context.args[0],
+        label="command name",
+        reserved=frozenset({"root", "__init__"}),
+    )
     target_dir = Path.cwd()
+    stream = context.terminal.stream if context.terminal is not None else None
 
     # Locate project package root by finding directory containing commands/root.py
     package_name = None
@@ -42,13 +50,14 @@ def _run_add(context: CommandContext) -> int:
             COMMAND_TEMPLATE.format(
                 command_name=command_name,
                 short_description=f"{command_name} command",
-            )
+            ),
+            encoding="utf-8",
         )
-        print(f"Created {command_file.relative_to(target_dir)}")
+        print(f"Created {command_file.relative_to(target_dir)}", file=stream)
 
         # 2. Register command in root.py
         root_py = commands_dir / "root.py"
-        content = root_py.read_text()
+        content = root_py.read_text(encoding="utf-8")
 
         import_line = (
             f"from .{command_name} import build_command as build_{command_name}_command"
@@ -71,9 +80,10 @@ def _run_add(context: CommandContext) -> int:
                     lines.insert(i, register_line)
                     break
 
-            root_py.write_text("\n".join(lines) + "\n")
+            root_py.write_text("\n".join(lines) + "\n", encoding="utf-8")
             print(
-                f"Updated {root_py.relative_to(target_dir)} to register {command_name}"
+                f"Updated {root_py.relative_to(target_dir)} to register {command_name}",
+                file=stream,
             )
     except OSError as exc:
         raise UsageError(f"Could not add command {command_name!r}: {exc}") from exc

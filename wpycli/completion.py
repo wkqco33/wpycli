@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import re
+import shlex
 from collections.abc import Iterator
 from typing import TYPE_CHECKING
 
@@ -19,13 +21,28 @@ def _relative_path(command: Command) -> tuple[str, ...]:
     return tuple(command.full_path.split()[1:])
 
 
+def _completion_function_name(root: Command) -> str:
+    name = re.sub(r"[^A-Za-z0-9_]", "_", root.name)
+    return f"_{name}"
+
+
+def _escape_bash_double_quoted(value: str) -> str:
+    return (
+        value.replace("\\", "\\\\")
+        .replace('"', '\\"')
+        .replace("$", "\\$")
+        .replace("`", "\\`")
+    )
+
+
 def generate_bash_completion(root: Command) -> str:
     """Generate a Bash completion script (requires Bash 4+)."""
     from .parser import flags_for_help
 
+    function_name = _completion_function_name(root)
     lines = [
         f"# bash completion for {root.name}",
-        f"_{root.name}_complete() {{",
+        f"{function_name}_complete() {{",
         "    local cur cword",
         '    cur="${COMP_WORDS[COMP_CWORD]}"',
         "    cword=$COMP_CWORD",
@@ -34,14 +51,23 @@ def generate_bash_completion(root: Command) -> str:
     ]
     for node in _walk(root):
         key = " ".join(_relative_path(node))
-        children = [child.name for child in node.commands if not child.hidden]
-        flags = [
-            f"--{flag.name}"
-            for flag in flags_for_help(node.lineage())
-            if not flag.hidden
+        children = [
+            name
+            for child in node.commands
+            if not child.hidden
+            for name in (child.name, *child.aliases)
         ]
+        flags = []
+        for flag in flags_for_help(node.lineage()):
+            if flag.hidden:
+                continue
+            flags.append(f"--{flag.name}")
+            if flag.shorthand:
+                flags.append(f"-{flag.shorthand}")
         options = " ".join(children + flags)
-        lines.append(f'    _completions["{key}"]="{options}"')
+        lines.append(
+            f'    _completions["{_escape_bash_double_quoted(key)}"]="{_escape_bash_double_quoted(options)}"'
+        )
 
     lines.extend(
         [
@@ -56,7 +82,7 @@ def generate_bash_completion(root: Command) -> str:
             "",
             '    COMPREPLY=($(compgen -W "${_completions[$path]}" -- "$cur"))',
             "}",
-            f"complete -F _{root.name}_complete {root.name}",
+            f"complete -F {function_name}_complete {shlex.quote(root.name)}",
             "",
         ]
     )
@@ -87,11 +113,14 @@ def generate_fish_completion(root: Command) -> str:
         for child in node.commands:
             if child.hidden:
                 continue
-            lines.append(
-                f'complete -c {root.name} -n "{condition}" -f -a "{child.name}"'
-            )
+            for name in (child.name, *child.aliases):
+                lines.append(f'complete -c {root.name} -n "{condition}" -f -a "{name}"')
         for flag in flags_for_help(node.lineage()):
             if flag.hidden:
                 continue
             lines.append(f'complete -c {root.name} -n "{condition}" -l {flag.name}')
+            if flag.shorthand:
+                lines.append(
+                    f'complete -c {root.name} -n "{condition}" -s {flag.shorthand}'
+                )
     return "\n".join(lines)

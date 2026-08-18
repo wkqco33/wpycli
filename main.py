@@ -2,7 +2,13 @@ from __future__ import annotations
 
 import json
 
-from wpycli import Command, CommandContext, ConfigSettings, LoggingSettings
+from wpycli import (
+    Command,
+    CommandContext,
+    ConfigSettings,
+    LoggingSettings,
+    __version__,
+)
 
 
 def _log_command(context: CommandContext) -> None:
@@ -56,7 +62,7 @@ def build_cli() -> Command:
         use="wpycli",
         short="Cobra-inspired CLI toolkit for Python",
         long="A small Python CLI toolkit modeled after Cobra's command tree and execution flow.",
-        version="0.2.0",
+        version=__version__,
         persistent_pre_run=_log_command,
     )
     root.add_persistent_string_flag(

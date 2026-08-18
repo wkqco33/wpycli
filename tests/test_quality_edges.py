@@ -28,6 +28,9 @@ class UtilityEdgeTests(unittest.TestCase):
     def test_wrap_handles_overlong_cjk_run_and_overflowing_whitespace(self) -> None:
         self.assertEqual(visual_wrap("你好世界", 4), ["你好", "世界"])
         self.assertEqual(visual_wrap("one two", 3), ["one", " ", "two"])
+        self.assertEqual(visual_wrap("abcdef", 3), ["abc", "def"])
+        with self.assertRaisesRegex(ValueError, "width must be positive"):
+            visual_wrap("text", 0)
 
     def test_empty_and_combining_text_have_stable_normalized_width(self) -> None:
         self.assertEqual(visual_width(""), 0)
@@ -44,10 +47,18 @@ class FlagEdgeTests(unittest.TestCase):
         self.assertEqual(Flag("count", kind="count").metavar, "COUNT")
 
     def test_invalid_flag_definition_and_conversion_failures(self) -> None:
-        with self.assertRaisesRegex(ValueError, "non-empty long name"):
+        with self.assertRaisesRegex(ValueError, "shell-safe long name"):
             Flag("--bad")
-        with self.assertRaisesRegex(ValueError, "single character"):
+        with self.assertRaisesRegex(ValueError, "shell-safe single character"):
             Flag("name", shorthand="vv")
+        with self.assertRaisesRegex(ValueError, "shell-safe long name"):
+            Flag("bad name")
+
+    def test_command_names_and_aliases_are_shell_safe(self) -> None:
+        with self.assertRaisesRegex(ValueError, "shell-safe token"):
+            Command(use="bad/name")
+        with self.assertRaisesRegex(ValueError, "shell-safe tokens"):
+            Command(use="app", aliases=("bad alias",))
         with self.assertRaisesRegex(ValueError, "unsupported flag kind"):
             Flag("name", kind="path")
         with self.assertRaisesRegex(ValueError, "invalid boolean"):
@@ -99,6 +110,25 @@ class ParserMalformedInputTests(unittest.TestCase):
         with self.assertRaisesRegex(UsageError, "help does not accept flags"):
             resolve_invocation(command, ["help", "--verbose"])
 
+    def test_parser_sees_flags_added_after_an_initial_resolution(self) -> None:
+        command = Command(use="app", run=lambda context: 0)
+        resolve_invocation(command, [])
+        command.add_bool_flag("verbose")
+
+        invocation = resolve_invocation(command, ["--verbose"])
+
+        self.assertTrue(invocation.flags["verbose"])
+
+    def test_inherited_flag_collisions_are_rejected(self) -> None:
+        root = Command(use="app")
+        root.add_persistent_bool_flag("verbose", shorthand="v")
+        child = Command(use="serve", run=lambda context: 0)
+        child.add_bool_flag("verbose", shorthand="q")
+        root.add_command(child)
+
+        with self.assertRaisesRegex(UsageError, "duplicate flag name"):
+            resolve_invocation(root, ["serve"])
+
 
 class ManagementCLIQualityTests(unittest.TestCase):
     def test_build_cli_constructs_management_commands_and_dispatches_init(self) -> None:
@@ -131,6 +161,30 @@ class ManagementCLIQualityTests(unittest.TestCase):
             exit_code = build_cli().execute(["add"])
         self.assertEqual(exit_code, 2)
         self.assertIn("command name is required", stderr.getvalue())
+
+    def test_management_command_rejects_path_traversal_names(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            escaped_name = f"outside_{Path(temporary).name}"
+            original_cwd = os.getcwd()
+            try:
+                os.chdir(temporary)
+                stderr = io.StringIO()
+                with redirect_stdout(io.StringIO()), redirect_stderr(stderr):
+                    exit_code = build_cli().execute(["init", f"../{escaped_name}"])
+            finally:
+                os.chdir(original_cwd)
+
+        self.assertEqual(exit_code, 2)
+        self.assertIn("invalid project name", stderr.getvalue())
+        self.assertFalse(Path(temporary).parent.joinpath(escaped_name).exists())
+
+    def test_management_command_rejects_extra_arguments(self) -> None:
+        stderr = io.StringIO()
+        with redirect_stdout(io.StringIO()), redirect_stderr(stderr):
+            exit_code = build_cli().execute(["add", "serve", "extra"])
+
+        self.assertEqual(exit_code, 2)
+        self.assertIn("Usage: wpycli add", stderr.getvalue())
 
 
 if __name__ == "__main__":

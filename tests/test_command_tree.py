@@ -83,6 +83,20 @@ class CommandTreeTests(unittest.TestCase):
         # Verify the error is reported exactly once without duplication.
         self.assertEqual(stderr.getvalue().count("unknown flag '--bogus'"), 1)
 
+    def test_execute_can_use_injected_output_streams(self) -> None:
+        stdout = io.StringIO()
+        stderr = io.StringIO()
+        root = Command(
+            use="app",
+            run=lambda context: print("handler output", file=context.stdout),
+        )
+
+        exit_code = root.execute([], stdout=stdout, stderr=stderr)
+
+        self.assertEqual(exit_code, 0)
+        self.assertEqual(stdout.getvalue(), "handler output\n")
+        self.assertEqual(stderr.getvalue(), "")
+
     def test_persistent_post_run_still_executes_when_handler_raises(self) -> None:
         events: list[str] = []
         root = Command(use="app")

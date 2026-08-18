@@ -38,7 +38,38 @@ def split_cjk_and_words(text: str) -> list[str]:
     return sub_chunks
 
 
+def _hard_split(text: str, width: int) -> list[str]:
+    parts: list[str] = []
+    current: list[str] = []
+    current_width = 0
+
+    for chunk in split_cjk_and_words(text):
+        units = chunk if visual_width(chunk) > width else (chunk,)
+        for unit in units:
+            unit_width = visual_width(unit)
+            if current and current_width + unit_width > width:
+                parts.append("".join(current))
+                current = []
+                current_width = 0
+            if unit_width > width:
+                if current:
+                    parts.append("".join(current))
+                    current = []
+                    current_width = 0
+                parts.append(unit)
+            else:
+                current.append(unit)
+                current_width += unit_width
+
+    if current:
+        parts.append("".join(current))
+    return parts
+
+
 def visual_wrap(text: str, width: int) -> list[str]:
+    if width <= 0:
+        raise ValueError("width must be positive")
+
     chunks = re.split(r"(\s+)", text)
     chunks = [c for c in chunks if c]
 
@@ -67,8 +98,7 @@ def visual_wrap(text: str, width: int) -> list[str]:
                     current_line = []
                     current_width = 0
 
-                sub_chunks = split_cjk_and_words(chunk)
-                for sub_chunk in sub_chunks:
+                for sub_chunk in _hard_split(chunk, width):
                     sub_width = visual_width(sub_chunk)
                     if current_width + sub_width <= width:
                         current_line.append(sub_chunk)

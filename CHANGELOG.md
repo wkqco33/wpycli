@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.0] - 2026-08-18
+
+- Hardened project and command scaffolding against invalid names and path traversal.
+- Fixed mutable command-tree flag parsing and inherited flag collisions.
+- Added injectable command streams, typed-package metadata, safer completion output,
+  and improved terminal wrapping.
+
 ## [0.2.0] - 2026-08-16
 
 - Added project management commands for initializing projects and adding commands.

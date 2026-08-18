@@ -1,9 +1,10 @@
 from __future__ import annotations
 
 import logging
+import re
 import sys
 from collections.abc import Sequence
-from typing import Any
+from typing import Any, TextIO
 
 from .context import ArgsValidator, CommandContext, HookHandler, RunHandler
 from .errors import BootstrapError, CLIError, UsageError
@@ -15,6 +16,7 @@ from .runtime import ConfigSettings, LoggingSettings, bootstrap_runtime
 INTERNAL_LOGGER_NAME = "wpycli._internal"
 _logger = logging.getLogger(INTERNAL_LOGGER_NAME)
 _logger.addHandler(logging.NullHandler())
+_logger.propagate = False
 
 
 class Command:
@@ -59,6 +61,13 @@ class Command:
 
         if not self.use:
             raise ValueError("use must not be empty")
+        if re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_-]*", self.name) is None:
+            raise ValueError("command name must be a shell-safe token")
+        if any(
+            re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_-]*", alias) is None
+            for alias in self.aliases
+        ):
+            raise ValueError("command aliases must be shell-safe tokens")
 
     @property
     def name(self) -> str:
@@ -158,7 +167,8 @@ class Command:
                 raise UsageError(
                     f"unsupported shell {shell!r} (expected one of: bash, zsh, fish)"
                 )
-            print(generator(root))
+            stream = context.terminal.stream if context.terminal is not None else None
+            print(generator(root), file=stream)
             return 0
 
         completion_cmd = Command(
@@ -398,13 +408,21 @@ class Command:
             hidden=hidden,
         )
 
-    def execute(self, argv: Sequence[str] | None = None) -> int:
+    def execute(
+        self,
+        argv: Sequence[str] | None = None,
+        *,
+        stdout: TextIO | None = None,
+        stderr: TextIO | None = None,
+    ) -> int:
         from .help import help_text, usage_text
         from .parser import resolve_invocation
 
         argv_list = list(sys.argv[1:] if argv is None else argv)
-        stdout_terminal = Terminal(stream=sys.stdout)
-        stderr_terminal = Terminal(stream=sys.stderr)
+        stdout_stream = sys.stdout if stdout is None else stdout
+        stderr_stream = sys.stderr if stderr is None else stderr
+        stdout_terminal = Terminal(stream=stdout_stream)
+        stderr_terminal = Terminal(stream=stderr_stream)
 
         _logger.debug("Starting CLI execution with argv: %s", argv_list)
         try:
@@ -419,17 +437,17 @@ class Command:
             )
 
             if resolved.flags.get("no-color"):
-                stdout_terminal = Terminal(stream=sys.stdout, force_color=False)
-                stderr_terminal = Terminal(stream=sys.stderr, force_color=False)
+                stdout_terminal = Terminal(stream=stdout_stream, force_color=False)
+                stderr_terminal = Terminal(stream=stderr_stream, force_color=False)
 
             if resolved.show_help:
-                print(help_text(resolved.command, stdout_terminal))
+                print(help_text(resolved.command, stdout_terminal), file=stdout_stream)
                 return 0
             if resolved.show_version:
                 version = self.root().version
                 if not version:
                     raise UsageError("version is not configured", command=self.root())
-                print(version)
+                print(version, file=stdout_stream)
                 return 0
             if resolved.command.run is None:
                 raise UsageError(
@@ -444,7 +462,7 @@ class Command:
                     stderr_terminal.message(
                         "warning", "Deprecated", resolved.command.deprecated
                     ),
-                    file=sys.stderr,
+                    file=stderr_stream,
                 )
             runtime_owner = resolved.command._runtime_owner()
 
@@ -476,6 +494,8 @@ class Command:
                 config=runtime.config,
                 logger=runtime.logger,
                 terminal=stdout_terminal,
+                stdout=stdout_stream,
+                stderr=stderr_stream,
             )
             _logger.debug("Executing command logic...")
             return resolved.command._run(context)
@@ -483,10 +503,14 @@ class Command:
             _logger.debug("CLI usage error: %s", exc)
             if str(exc):
                 print(
-                    stderr_terminal.message("error", "Error", str(exc)), file=sys.stderr
+                    stderr_terminal.message("error", "Error", str(exc)),
+                    file=stderr_stream,
                 )
             if exc.command is not None:
-                print(stderr_terminal.muted(usage_text(exc.command)), file=sys.stderr)
+                print(
+                    stderr_terminal.muted(usage_text(exc.command)),
+                    file=stderr_stream,
+                )
             return exc.exit_code
         except Exception as exc:
             # Hide traceback from terminal output while keeping full details in debug log.
@@ -497,7 +521,7 @@ class Command:
                 stderr_terminal.message(
                     "error", "System Error", f"An unexpected error occurred: {exc}"
                 ),
-                file=sys.stderr,
+                file=stderr_stream,
             )
             return 1
 
@@ -513,7 +537,12 @@ class Command:
 
     def _validate_args(self, args: list[str]) -> None:
         if self.args_validator is not None:
-            self.args_validator(args)
+            try:
+                self.args_validator(args)
+            except CLIError as exc:
+                if exc.command is None:
+                    exc.command = self
+                raise
 
     def _validate_flags(self, flag_values: dict[str, Any]) -> None:
         from .parser import flags_for_help

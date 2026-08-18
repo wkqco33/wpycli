@@ -33,9 +33,9 @@ class BashCompletionTests(unittest.TestCase):
     def test_includes_visible_commands_and_flags_not_hidden(self) -> None:
         script = generate_bash_completion(_build_tree())
 
-        self.assertIn('_completions[""]="serve config --verbose"', script)
-        self.assertIn('_completions["serve"]="--verbose --host"', script)
-        self.assertIn('_completions["config"]="show --verbose"', script)
+        self.assertIn('_completions[""]="serve config --verbose -v"', script)
+        self.assertIn('_completions["serve"]="--verbose -v --host"', script)
+        self.assertIn('_completions["config"]="show --verbose -v"', script)
         self.assertNotIn("secret", script)
 
     @unittest.skipUnless(which("bash"), "bash not available")
@@ -52,7 +52,7 @@ class ZshCompletionTests(unittest.TestCase):
         script = generate_zsh_completion(_build_tree())
         self.assertIn("#compdef demo", script)
         self.assertIn("bashcompinit", script)
-        self.assertIn('_completions[""]="serve config --verbose"', script)
+        self.assertIn('_completions[""]="serve config --verbose -v"', script)
 
 
 class FishCompletionTests(unittest.TestCase):

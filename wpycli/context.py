@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 from collections.abc import Callable
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, TextIO
 
 from .output import Terminal
 
@@ -24,3 +24,5 @@ class CommandContext:
     config: Any = None
     logger: logging.Logger | None = None
     terminal: Terminal | None = None
+    stdout: TextIO | None = None
+    stderr: TextIO | None = None

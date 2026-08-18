@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from typing import Any
@@ -49,12 +50,18 @@ class Flag:
     hidden: bool = False
 
     def __post_init__(self) -> None:
-        if not self.name or self.name.startswith("-"):
-            raise ValueError("flag name must be a non-empty long name")
+        if (
+            not self.name
+            or re.fullmatch(r"[A-Za-z0-9_][A-Za-z0-9_-]*", self.name) is None
+        ):
+            raise ValueError("flag name must be a shell-safe long name")
         if self.kind not in _PARSERS:
             raise ValueError(f"unsupported flag kind: {self.kind!r}")
-        if self.shorthand is not None and len(self.shorthand) != 1:
-            raise ValueError("flag shorthand must be a single character")
+        if self.shorthand is not None and (
+            len(self.shorthand) != 1
+            or re.fullmatch(r"[A-Za-z0-9_]", self.shorthand) is None
+        ):
+            raise ValueError("flag shorthand must be a shell-safe single character")
         if (
             self.choices
             and self.default is not None

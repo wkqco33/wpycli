@@ -4,7 +4,6 @@ import difflib
 import logging
 from collections.abc import Iterable
 from dataclasses import dataclass
-from functools import lru_cache
 from typing import Any
 
 from .command import INTERNAL_LOGGER_NAME, Command
@@ -228,7 +227,6 @@ def _default_flag_values(lineage: tuple[Command, ...]) -> dict[str, Any]:
     return defaults
 
 
-@lru_cache(maxsize=128)
 def _flag_maps(lineage: tuple[Command, ...]) -> tuple[dict[str, Flag], dict[str, Flag]]:
     long_flags: dict[str, Flag] = {}
     short_flags: dict[str, Flag] = {}
@@ -239,15 +237,30 @@ def _flag_maps(lineage: tuple[Command, ...]) -> tuple[dict[str, Flag], dict[str,
     return long_flags, short_flags
 
 
-@lru_cache(maxsize=128)
 def flags_for_help(lineage: tuple[Command, ...]) -> tuple[Flag, ...]:
     flags: list[Flag] = []
     for command in lineage:
         flags.extend(command.persistent_flags)
     flags.extend(lineage[-1].flags)
+
+    names: set[str] = set()
+    shorthands: set[str] = set()
+    for flag in flags:
+        if flag.name in names:
+            raise UsageError(
+                f"duplicate flag name in command lineage: --{flag.name}",
+                command=lineage[-1],
+            )
+        if flag.shorthand is not None and flag.shorthand in shorthands:
+            raise UsageError(
+                f"duplicate flag shorthand in command lineage: -{flag.shorthand}",
+                command=lineage[-1],
+            )
+        names.add(flag.name)
+        if flag.shorthand is not None:
+            shorthands.add(flag.shorthand)
     return tuple(flags)
 
 
-@lru_cache(maxsize=128)
 def inherited_persistent_flags(lineage: tuple[Command, ...]) -> tuple[Flag, ...]:
     return tuple(f for cmd in lineage[:-1] for f in cmd.persistent_flags)

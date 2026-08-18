@@ -72,13 +72,13 @@ uv run python main.py --log-level DEBUG config
 ## 프로그래밍 모델
 
 ```python
-from wpycli import Command, ConfigSettings, LoggingSettings
+from wpycli import Command, ConfigSettings, LoggingSettings, __version__
 
 def build_cli() -> Command:
     root = Command(
         use="demo",
         short="Demo CLI",
-        version="0.2.0",
+        version=__version__,
     )
 
     root.add_persistent_string_flag("config", help="설정 파일 경로")
@@ -93,7 +93,7 @@ def build_cli() -> Command:
     )
 
     def _run_echo(ctx):
-        print(f"Echo: {' '.join(ctx.args)}")
+        print(f"Echo: {' '.join(ctx.args)}", file=ctx.stdout)
 
     echo = Command(use="echo", short="출력", run=_run_echo)
     root.add_command(echo)
@@ -102,6 +102,10 @@ def build_cli() -> Command:
 if __name__ == "__main__":
     build_cli().execute()
 ```
+
+`execute()`는 `stdout`와 `stderr` 스트림을 주입할 수 있으며, 핸들러에서는
+`context.stdout`과 `context.stderr`를 사용해 라이브러리를 다른 애플리케이션에
+임베드할 수 있습니다.
 
 ## 개발 및 테스트
 
